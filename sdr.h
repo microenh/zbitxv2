@@ -213,7 +213,7 @@ void tx_on(int trigger);
 void tx_off();
 long get_freq();
 int get_pitch();
-time_t time_sbitx();
+// time_t time_sbitx();
 
 //cw defines, these are bitfields, hence, powers of 2
 #define CW_IDLE (0)

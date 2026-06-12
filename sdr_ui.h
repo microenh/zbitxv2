@@ -54,7 +54,7 @@ void macro_list(char *output);
 void macro_get_keys(char *output);
 void update_log_ed();
 void write_call_log();
-time_t time_sbitx();
+// time_t time_sbitx();
 
 void tlog(char * id, char * text, int p);
 //void tlogf(char * format, ...);
@@ -70,4 +70,4 @@ void tlog(char * id, char * text, int p);
 // 014 : Web GridMap v1, and cur selected Band/Store shown
 // 015 : Web Robinson zoom GridMap, mouseover grid info, Logged Seen btn
 // 016 : Cleanout and prepare for github sbitx-oz7bx v3.02.0016
-#define VER_STR "sbitx v4.001"
+#define VER_STR "sbitx v4.001(m1)"

@@ -46,7 +46,7 @@ The initial sync between the gui values, the core radio values, settings, et al 
 #include "logbook.h"
 #include "oled.h"
 #include "hist_disp.h"
-#include "ntputil.h"
+// #include "ntputil.h"
 
 #define FT8_START_QSO 1
 #define FT8_CONTINUE_QSO 0
@@ -948,7 +948,7 @@ int remote_update_field(int i, char *text){
 	//always send status afresh
 	if (!strcmp(f->label, "STATUS")){
 		//send time
-		time_t now = time_sbitx();
+		time_t now = time(NULL); // time_sbitx();
 		struct tm *tmp = gmtime(&now);
 		sprintf(text, "STATUS %04d/%02d/%02d %02d:%02d:%02dZ",  
 			tmp->tm_year + 1900, tmp->tm_mon + 1, tmp->tm_mday, tmp->tm_hour, tmp->tm_min, tmp->tm_sec); 
@@ -982,7 +982,7 @@ int get_field_timestamped(int i, char *text, uint32_t *timestamp){
 	//always send status afresh
 	if (!strcmp(f->label, "STATUS")){
 		//send time
-		time_t now = time_sbitx();
+		time_t now = time(NULL); // time_sbitx();
 		struct tm *tmp = gmtime(&now);
 		sprintf(text, "STATUS %04d/%02d/%02d %02d:%02d:%02dZ",  
 			tmp->tm_year + 1900, tmp->tm_mon + 1, tmp->tm_mday, tmp->tm_hour, tmp->tm_min, tmp->tm_sec); 
@@ -2789,7 +2789,7 @@ void call_wipe(){
 void update_titlebar(){
 	char buff[100];
 
-	time_t now = time_sbitx();
+	time_t now = time(NULL); // time_sbitx();
 	struct tm *tmp = gmtime(&now);
 	sprintf(buff, "sBitx %s %s %04d/%02d/%02d %02d:%02d:%02dZ",  
 		get_field("#mycallsign")->value, get_field("#mygrid")->value,
@@ -2875,7 +2875,7 @@ int do_status(struct field *f, cairo_t *gfx, int event, int a, int b, int c){
 	char buff[100];
 
 	if (event == FIELD_DRAW){
-		time_t now = time_sbitx();
+		time_t now = time(NULL); // time_sbitx();
 		struct tm *tmp = gmtime(&now);
 		sprintf(buff, "%04d/%02d/%02d %02d:%02d:%02dZ",  
 			tmp->tm_year + 1900, tmp->tm_mon + 1, tmp->tm_mday, tmp->tm_hour, tmp->tm_min, tmp->tm_sec); 
@@ -4534,8 +4534,8 @@ void utc_set(char *args, int update_rtc){
 			return;
 	}
 
-	rtc_write_ntp(n[0], n[1], n[2], n[3], n[4], n[5]);
- 	rtc_read();
+	// rtc_write_ntp(n[0], n[1], n[2], n[3], n[4], n[5]);
+ 	// rtc_read();
 
 	if (n[0] < 2000)
 		n[0] += 2000;
@@ -4940,8 +4940,8 @@ void cmd_exec(char *cmd){
 	}
 	else if (!strcmp(exec, "abort"))
 		abort_tx();
-	else if (!strcmp(exec, "rtc"))
-		rtc_read();
+	// else if (!strcmp(exec, "rtc"))
+	// 	rtc_read();
 	else if (!strcmp(exec, "txcal")){
 		char response[10];
 		sdr_request("txcal=", response);
@@ -5137,8 +5137,8 @@ int main( int argc, char* argv[] ) {
 	else
 		setup("plughw:0,0");	// otherwise use the default audio output device
 
-	const char* ntp_server = "time.google.com";
-  ntp_sync_thread(ntp_server);
+	// const char* ntp_server = "time.google.com";
+  // ntp_sync_thread(ntp_server);
 
 	struct field *f;
 	f = active_layout;
@@ -5216,7 +5216,7 @@ int main( int argc, char* argv[] ) {
   hamlib_start();
 	remote_start_thread();
 
-	rtc_read();
+	// rtc_read();
 
 	//switch to maximum priority
 	struct sched_param sch;
