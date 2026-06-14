@@ -2,7 +2,8 @@
 #include <linux/types.h>
 #include <stdint.h>
 #include <wiringPi.h>
-#include "i2cbb.h"
+#include <wiringPiI2C.h>
+//#include "i2cbb.h"
 #include "si5351.h"
 
 #define SDA 23 
@@ -48,7 +49,7 @@ int xtal_freq_calibrated = 25000000; // tcxo
 uint32_t plla_freq, pllb_freq;
 
 static int i2c_error_count = 0;       // counts I2C Errors
-
+static int fd_si5351;
 #define SI5351_ADDR 0x60              // I2C address of Si5351   (typical)
 
 /*
@@ -57,12 +58,19 @@ void i2cSendRegister(uint8_t reg, uint8_t* data, uint8_t n){
 }
 */
 
+/*
 void i2cSendRegister(uint8_t reg, uint8_t val){ 
   while (i2cbb_write_byte_data(SI5351_ADDR, reg, val) < 0)
   {
-    printf("Repeating I2C #%d\n",i2c_error_count++);  // reports number of I2C repeats caused by errors
+		// reports number of I2C repeats caused by errors
+    printf("Repeating I2C #%d\n",i2c_error_count++);
     delay(1);
   }
+}
+*/
+
+void i2cSendRegister(uint8_t reg, uint8_t val){ 
+	wiringPiI2CWriteReg8(fd_si5351, reg, val); 
 }
 
 void si5351_reset(){
@@ -72,7 +80,8 @@ void si5351_reset(){
 void si5351a_clkoff(uint8_t clk)
 {
   //i2c_init();
-  i2cSendRegister(clk, 0x80);   // Refer to SiLabs AN619 to see bit values - 0x80 turns off the output stage
+	// Refer to SiLabs AN619 to see bit values - 0x80 turns off the output stage
+  i2cSendRegister(clk, 0x80);
 
   //i2c_exit();
 }
@@ -258,7 +267,8 @@ void si5351_set_calibration(int32_t cal){
 }
 
 void si5351bx_init(){ 
-  i2cbb_init(SDA, SCL);
+  //i2cbb_init(SDA, SCL);
+	fd_si5351 = wiringPiI2CSetupInterface("/dev/i2c-11",SI5351_ADDR);
 	delay(10);
   si5351_reset();
 	delay(10);

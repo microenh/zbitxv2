@@ -41,10 +41,10 @@ The initial sync between the gui values, the core radio values, settings, et al 
 #include "hamlib.h"
 #include "remote.h"
 #include "modem_ft8.h"
-#include "i2cbb.h"
+// #include "i2cbb.h"
 #include "webserver.h"
 #include "logbook.h"
-#include "oled.h"
+// #include "oled.h"
 #include "hist_disp.h"
 // #include "ntputil.h"
 
@@ -4050,6 +4050,7 @@ void remote_get_spectrum(char *buff){
   return;
 }
 
+/*
 static void zbitx_logs(){
 	char logbook_path[200];
 	char row_response[1000], row[1000];
@@ -4071,6 +4072,8 @@ static void zbitx_logs(){
 	}
 	fclose(pf);
 }
+*/
+
 /*
 void zbitx_poll(int all){
 	char buff[3000];

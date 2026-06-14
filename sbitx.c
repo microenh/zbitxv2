@@ -18,7 +18,7 @@
 #include "sdr.h"
 #include "sdr_ui.h"
 #include "sound.h"
-#include "i2cbb.h"
+// #include "i2cbb.h"
 #include "si5351.h"
 #include "ini.h"
 int set_field(char *, char *);  // This should be moved to a .h file
@@ -739,6 +739,7 @@ void rx_linear(int32_t *input_rx,  int32_t *input_mic,
 	//printf("S meter: %d\n", calculate_s_meter(r));
 }
 
+#if 0
 void read_power(){
 	uint8_t response[4];
 	int16_t vfwd, vref;
@@ -768,13 +769,14 @@ void read_power(){
 		alc_level *= 135.0 / (1.0 * rf_v_p2p);
 		printf("ALC tripped, to %d percent\n", (int)(100 * alc_level));
 	}
-/*	else if (alc_level < 0.95){
+	/* else if (alc_level < 0.95){
 		printf("alc releasing to ");
 		alc_level *= 1.02;
 	}
-*/
-//	printf("alc: %g\n", alc_level);
+	*/
+	//	printf("alc: %g\n", alc_level);
 }
+#endif
 
 static int tx_process_restart = 0;
 
@@ -933,8 +935,8 @@ void tx_process(
 			//output_tx[i] = 0;
 	}
 
-	if (sbitx_version < 4)
-		read_power();
+	// if (sbitx_version < 4)
+	// 	read_power();
 	sdr_modulation_update(output_tx, MAX_BINS/2, tx_amp);	
 }
 
@@ -1408,13 +1410,13 @@ void setup(char *audio_output_device){
 	tx_init(7000000, MODE_LSB, -3000, -150);
 
 	//detect the version of sbitx if not read from hw_settings
-	if (sbitx_version == -1){
-		uint8_t response[4];
-		if(i2cbb_read_i2c_block_data(0x8, 0, 4, response) == -1)
-			sbitx_version = SBITX_DE;
-		else
-			sbitx_version = SBITX_V2;
-	}
+	// if (sbitx_version == -1){
+	//	uint8_t response[4];
+	//	if(i2cbb_read_i2c_block_data(0x8, 0, 4, response) == -1)
+	//		sbitx_version = SBITX_DE;
+	//	else
+	//		sbitx_version = SBITX_V2;
+	//}
 	printf("hw version: %d\n", sbitx_version);
 
 	setup_audio_codec();
