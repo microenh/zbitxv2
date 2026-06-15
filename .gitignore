@@ -2,5 +2,5 @@
 data/*.db
 *.swp
 data/results_row.txt
-data/grids.txt
+web/grids.txt
 sbitx

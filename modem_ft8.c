@@ -15,15 +15,15 @@
 #include "sdr_ui.h"
 #include "modem_ft8.h"
 #include "logbook.h"
-
 #include "ft8_lib/common/common.h"
 #include "ft8_lib/common/wave.h"
-#include "ft8_lib/common/debug.h"
+//#include "ft8_lib/common/debug.h"
 #include "ft8_lib/ft8/pack.h"
 #include "ft8_lib/ft8/decode.h"
 #include "ft8_lib/ft8/encode.h"
 #include "ft8_lib/ft8/constants.h"
 #include "ft8_lib/fft/kiss_fftr.h"
+#include "log.h"
 
 static int32_t ft8_rx_buff[FT8_MAX_BUFF];
 static float ft8_rx_buffer[FT8_MAX_BUFF];
@@ -55,7 +55,7 @@ static const int kMax_decoded_messages = 50;
 static const int kFreq_osr = 2; // Frequency oversampling rate (bin subdivision)
 static const int kTime_osr = 2; // Time oversampling rate (symbol subdivision)
 
-#define LOG_LEVEL LOG_INFO
+// #define LOG_LEVEL LOG_INFO
 
 #define FT8_SYMBOL_BT 2.0f ///< symbol smoothing filter bandwidth factor (BT)
 #define FT4_SYMBOL_BT 1.0f ///< symbol smoothing filter bandwidth factor (BT)
@@ -96,7 +96,11 @@ static void synth_gfsk(const uint8_t* symbols, int n_sym, float f0, float symbol
     int n_wave = n_sym * n_spsym;                            // Number of output samples
     float hmod = 1.0f;
 
-    LOG(LOG_DEBUG, "n_spsym = %d\n", n_spsym);
+    #ifdef DEBUG
+			// LOG(LOG_DEBUG, "n_spsym = %d\n", n_spsym);
+			log_info("n_spsym = %d\n", n_spsym);
+		#endif
+
     // Compute the smoothed frequency waveform.
     // Length = (nsym+2)*n_spsym samples, first and last symbols extended
     float dphi_peak = 2 * M_PI * hmod / n_spsym;
@@ -226,7 +230,10 @@ void waterfall_init(waterfall_t* me, int max_blocks, int num_bins, int time_osr,
     me->freq_osr = freq_osr;
     me->block_stride = (time_osr * freq_osr * num_bins);
     me->mag = (uint8_t  *)malloc(mag_size);
-    LOG(LOG_DEBUG, "Waterfall size = %zu\n", mag_size);
+		#ifdef DEBUG
+    	//LOG(LOG_DEBUG, "Waterfall size = %zu\n", mag_size);
+    	log_debug("Waterfall size = %zu\n", mag_size);
+		#endif
 }
 
 void waterfall_free(waterfall_t* me)
@@ -289,10 +296,17 @@ static void monitor_init(monitor_t* me, const monitor_config_t* cfg)
     size_t fft_work_size;
     kiss_fftr_alloc(me->nfft, 0, 0, &fft_work_size);
 
-    //LOG(LOG_INFO, "Block size = %d\n", me->block_size);
-    //LOG(LOG_INFO, "Subblock size = %d\n", me->subblock_size);
-    //LOG(LOG_INFO, "N_FFT = %d\n", me->nfft);
-    LOG(LOG_DEBUG, "FFT work area = %zu\n", fft_work_size);
+		#ifdef DEBUG
+			//LOG(LOG_INFO, "Block size = %d\n", me->block_size);
+			//LOG(LOG_INFO, "Subblock size = %d\n", me->subblock_size);
+			//LOG(LOG_INFO, "N_FFT = %d\n", me->nfft);
+			//LOG(LOG_DEBUG, "FFT work area = %zu\n", fft_work_size);
+
+			//log_info("Block size = %d\n", me->block_size);
+			//log_info("Subblock size = %d\n", me->subblock_size);
+			//log_info("N_FFT = %d\n", me->nfft);
+			log_debug("FFT work area = %zu\n", fft_work_size);
+		#endif
 
     me->fft_work = malloc(fft_work_size);
     me->fft_cfg = kiss_fftr_alloc(me->nfft, 0, me->fft_work, &fft_work_size);
@@ -383,8 +397,10 @@ static int sbitx_ft8_decode(float *signal, int num_samples, bool is_ft8)
 {
     int sample_rate = 12000;
 
-    LOG(LOG_DEBUG, "Sample rate %d Hz, %d samples, %.3f seconds\n", sample_rate, num_samples, (double)num_samples / sample_rate);
-
+		#ifdef DEBUG
+			// LOG(LOG_DEBUG, "Sample rate %d Hz, %d samples, %.3f seconds\n", sample_rate, num_samples, (double)num_samples / sample_rate);
+			// log_debug("Sample rate %d Hz, %d samples, %.3f seconds\n", sample_rate, num_samples, (double)num_samples / sample_rate);
+		#endif
     // Compute FFT over the whole signal and store it
     monitor_t mon;
     monitor_config_t mon_cfg = {
@@ -416,10 +432,12 @@ static int sbitx_ft8_decode(float *signal, int num_samples, bool is_ft8)
     // Process the waveform data frame by frame - you could have a live loop here with data from an audio device
     for (int frame_pos = 0; frame_pos + mon.block_size <= num_samples; frame_pos += mon.block_size)
         monitor_process(&mon, signal + frame_pos);
-    
-//    LOG(LOG_DEBUG, "Waterfall accumulated %d symbols\n", mon.wf.num_blocks);
-//    LOG(LOG_INFO, "Max magnitude: %.1f dB\n", mon.max_mag);
-
+		#ifdef DEBUG 
+			// LOG(LOG_DEBUG, "Waterfall accumulated %d symbols\n", mon.wf.num_blocks);
+			// LOG(LOG_INFO, "Max magnitude: %.1f dB\n", mon.max_mag);
+			// log_debug( "Waterfall accumulated %d symbols\n", mon.wf.num_blocks);
+			// log_info( "Max magnitude: %.1f dB\n", mon.max_mag);
+		#endif
     // Find top candidates by Costas sync score and localize them in time and frequency
     candidate_t candidate_list[kMax_candidates];
     int num_candidates = ft8_find_sync(&mon.wf, kMax_candidates, candidate_list, kMin_score);
@@ -448,34 +466,56 @@ static int sbitx_ft8_decode(float *signal, int num_samples, bool is_ft8)
 
         message_t message;
         decode_status_t status;
-        if (!ft8_decode(&mon.wf, cand, &message, kLDPC_iterations, &status)){
-            // printf("000000 %3d %+4.2f %4.0f ~  ---\n", cand->score, time_sec, freq_hz);
-            if (status.ldpc_errors > 0)
-                LOG(LOG_DEBUG, "LDPC decode: %d errors\n", status.ldpc_errors);
-            else if (status.crc_calculated != status.crc_extracted)
-                LOG(LOG_DEBUG, "CRC mismatch!\n");
-            else if (status.unpack_status != 0)
-                LOG(LOG_DEBUG, "Error while unpacking!\n");
-            continue;
+				if (!ft8_decode(&mon.wf, cand, &message, kLDPC_iterations, &status)){
+					// printf("000000 %3d %+4.2f %4.0f ~  ---\n", cand->score, time_sec, freq_hz);
+					if (status.ldpc_errors > 0){
+						#ifdef DEBUG
+							//LOG(LOG_DEBUG, "LDPC decode: %d errors\n", status.ldpc_errors);
+							log_debug("LDPC decode: %d errors\n", status.ldpc_errors);
+						#endif
+					} else if (status.crc_calculated != status.crc_extracted){
+						#ifdef DEBUG
+							//LOG(LOG_DEBUG, "CRC mismatch!\n");
+							log_debug("CRC mismatch!\n");
+						#endif
+					} else if (status.unpack_status != 0){
+						#ifdef DEBUG
+							//LOG(LOG_DEBUG, "Error while unpacking!\n");
+							log_debug("Error while unpacking!\n");
+						#endif
+					}
+					continue;
         }
 
-        LOG(LOG_DEBUG, "Checking hash table for %4.1fs / %4.1fHz [%d]...\n", time_sec, freq_hz, cand->score);
+				#ifdef DEBUG
+        	//LOG(LOG_DEBUG, "Checking hash table for %4.1fs / %4.1fHz [%d]...\n", time_sec, freq_hz, cand->score);
+        	log_debug("Checking hash table for %4.1fs / %4.1fHz [%d]...\n", time_sec, freq_hz, cand->score);
+				#endif
         int idx_hash = message.hash % kMax_decoded_messages;
         bool found_empty_slot = false;
         bool found_duplicate = false;
         do {
             if (decoded_hashtable[idx_hash] == NULL) {
-                LOG(LOG_DEBUG, "Found an empty slot\n");
-                found_empty_slot = true;
+							#ifdef DEBUG
+                //LOG(LOG_DEBUG, "Found an empty slot\n");
+                log_debug("Found an empty slot\n");
+							#endif
+              found_empty_slot = true;
             }
             else if ((decoded_hashtable[idx_hash]->hash == message.hash) && (0 == strcmp(decoded_hashtable[idx_hash]->text, message.text))) {
-                LOG(LOG_DEBUG, "Found a duplicate [%s]\n", message.text);
+                #ifdef DEBUG
+									//LOG(LOG_DEBUG, "Found a duplicate [%s]\n", message.text);
+									log_debug("Found a duplicate [%s]\n", message.text);
+								#endif
                 found_duplicate = true;
             }
             else {
-                LOG(LOG_DEBUG, "Hash table clash!\n");
-                // Move on to check the next entry in hash table
-                idx_hash = (idx_hash + 1) % kMax_decoded_messages;
+							#ifdef DEBUG
+                // LOG(LOG_DEBUG, "Hash table clash!\n");
+                log_debug("Hash table clash!\n");
+							#endif
+              // Move on to check the next entry in hash table
+              idx_hash = (idx_hash + 1) % kMax_decoded_messages;
             }
         } while (!found_empty_slot && !found_duplicate);
 
@@ -503,8 +543,10 @@ static int sbitx_ft8_decode(float *signal, int num_samples, bool is_ft8)
 				n_decodes++;
       }
     }
-    //LOG(LOG_INFO, "Decoded %d messages\n", num_decoded);
-
+		#ifdef DEBUG
+    	//LOG(LOG_INFO, "Decoded %d messages\n", num_decoded);
+    	//log_info("Decoded %d messages\n", num_decoded);
+		#endif
     monitor_free(&mon);
 
     return n_decodes;

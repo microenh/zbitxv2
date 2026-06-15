@@ -34,6 +34,7 @@ The initial sync between the gui values, the core radio values, settings, et al 
 #include <errno.h>
 #include <wiringPi.h>
 #include <wiringSerial.h>
+#include "log.h"
 #include "sdr.h"
 #include "sound.h"
 #include "sdr_ui.h"
@@ -5114,6 +5115,8 @@ void ensure_single_instance(){
 }
 
 int main( int argc, char* argv[] ) {
+
+	log_set_level(LOG_INFO);
 
 	puts(VER_STR);
 	active_layout = main_controls;
