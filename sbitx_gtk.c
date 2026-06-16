@@ -1113,6 +1113,10 @@ void write_console(int style, char *raw_text){
 	strcat(directory, "/sbitx/data/display_log.txt");
     */
     //tlog("write_console", text, style);
+
+	#ifdef LOG
+		log_debug("write_console [%s], %d", raw_text, style);
+	#endif
 	char *text;
 	char decorated[1000];
 	char remote_text[2000];
@@ -1124,7 +1128,7 @@ void write_console(int style, char *raw_text){
 	text = decorated;
 	web_write(style, text);
 	sprintf(remote_text, "%d %s\n", style, text);
-	remote_write(remote_text);
+	//remote_write(remote_text);
 	//move to a new line if the style has changed
 	if (style != console_style){
 		q_write(&q_web, '{');

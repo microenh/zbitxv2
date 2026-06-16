@@ -96,9 +96,9 @@ static void synth_gfsk(const uint8_t* symbols, int n_sym, float f0, float symbol
     int n_wave = n_sym * n_spsym;                            // Number of output samples
     float hmod = 1.0f;
 
-    #ifdef DEBUG
+    #ifdef LOG
 			// LOG(LOG_DEBUG, "n_spsym = %d\n", n_spsym);
-			log_info("n_spsym = %d\n", n_spsym);
+			log_debug("n_spsym = %d\n", n_spsym);
 		#endif
 
     // Compute the smoothed frequency waveform.
@@ -159,8 +159,11 @@ int sbitx_ft8_encode(char *message, int32_t freq,  float *signal, bool is_ft4)
     int rc = pack77(message, packed);
     if (rc < 0)
     {
-        printf("Cannot parse message!\n");
-        printf("RC = %d\n", rc);
+				#ifdef LOG
+        	//printf("Cannot parse message!\n");
+        	//printf("RC = %d\n", rc);
+					log_debug("Can't parse message: rc = %d.", rc);
+				#endif
         return -1;
     }
 
@@ -230,7 +233,7 @@ void waterfall_init(waterfall_t* me, int max_blocks, int num_bins, int time_osr,
     me->freq_osr = freq_osr;
     me->block_stride = (time_osr * freq_osr * num_bins);
     me->mag = (uint8_t  *)malloc(mag_size);
-		#ifdef DEBUG
+		#ifdef LOG
     	//LOG(LOG_DEBUG, "Waterfall size = %zu\n", mag_size);
     	log_debug("Waterfall size = %zu\n", mag_size);
 		#endif
@@ -296,7 +299,7 @@ static void monitor_init(monitor_t* me, const monitor_config_t* cfg)
     size_t fft_work_size;
     kiss_fftr_alloc(me->nfft, 0, 0, &fft_work_size);
 
-		#ifdef DEBUG
+		#ifdef LOG
 			//LOG(LOG_INFO, "Block size = %d\n", me->block_size);
 			//LOG(LOG_INFO, "Subblock size = %d\n", me->subblock_size);
 			//LOG(LOG_INFO, "N_FFT = %d\n", me->nfft);
@@ -397,7 +400,7 @@ static int sbitx_ft8_decode(float *signal, int num_samples, bool is_ft8)
 {
     int sample_rate = 12000;
 
-		#ifdef DEBUG
+		#ifdef LOG
 			// LOG(LOG_DEBUG, "Sample rate %d Hz, %d samples, %.3f seconds\n", sample_rate, num_samples, (double)num_samples / sample_rate);
 			// log_debug("Sample rate %d Hz, %d samples, %.3f seconds\n", sample_rate, num_samples, (double)num_samples / sample_rate);
 		#endif
@@ -432,7 +435,7 @@ static int sbitx_ft8_decode(float *signal, int num_samples, bool is_ft8)
     // Process the waveform data frame by frame - you could have a live loop here with data from an audio device
     for (int frame_pos = 0; frame_pos + mon.block_size <= num_samples; frame_pos += mon.block_size)
         monitor_process(&mon, signal + frame_pos);
-		#ifdef DEBUG 
+		#ifdef LOG 
 			// LOG(LOG_DEBUG, "Waterfall accumulated %d symbols\n", mon.wf.num_blocks);
 			// LOG(LOG_INFO, "Max magnitude: %.1f dB\n", mon.max_mag);
 			// log_debug( "Waterfall accumulated %d symbols\n", mon.wf.num_blocks);
@@ -469,17 +472,17 @@ static int sbitx_ft8_decode(float *signal, int num_samples, bool is_ft8)
 				if (!ft8_decode(&mon.wf, cand, &message, kLDPC_iterations, &status)){
 					// printf("000000 %3d %+4.2f %4.0f ~  ---\n", cand->score, time_sec, freq_hz);
 					if (status.ldpc_errors > 0){
-						#ifdef DEBUG
+						#ifdef LOG
 							//LOG(LOG_DEBUG, "LDPC decode: %d errors\n", status.ldpc_errors);
 							log_debug("LDPC decode: %d errors\n", status.ldpc_errors);
 						#endif
 					} else if (status.crc_calculated != status.crc_extracted){
-						#ifdef DEBUG
+						#ifdef LOG
 							//LOG(LOG_DEBUG, "CRC mismatch!\n");
 							log_debug("CRC mismatch!\n");
 						#endif
 					} else if (status.unpack_status != 0){
-						#ifdef DEBUG
+						#ifdef LOG
 							//LOG(LOG_DEBUG, "Error while unpacking!\n");
 							log_debug("Error while unpacking!\n");
 						#endif
@@ -487,7 +490,7 @@ static int sbitx_ft8_decode(float *signal, int num_samples, bool is_ft8)
 					continue;
         }
 
-				#ifdef DEBUG
+				#ifdef LOG
         	//LOG(LOG_DEBUG, "Checking hash table for %4.1fs / %4.1fHz [%d]...\n", time_sec, freq_hz, cand->score);
         	log_debug("Checking hash table for %4.1fs / %4.1fHz [%d]...\n", time_sec, freq_hz, cand->score);
 				#endif
@@ -496,21 +499,22 @@ static int sbitx_ft8_decode(float *signal, int num_samples, bool is_ft8)
         bool found_duplicate = false;
         do {
             if (decoded_hashtable[idx_hash] == NULL) {
-							#ifdef DEBUG
+							#ifdef LOG
                 //LOG(LOG_DEBUG, "Found an empty slot\n");
                 log_debug("Found an empty slot\n");
 							#endif
               found_empty_slot = true;
             }
-            else if ((decoded_hashtable[idx_hash]->hash == message.hash) && (0 == strcmp(decoded_hashtable[idx_hash]->text, message.text))) {
-                #ifdef DEBUG
+            else if ((decoded_hashtable[idx_hash]->hash == message.hash)
+								 && (0 == strcmp(decoded_hashtable[idx_hash]->text, message.text))) {
+                #ifdef LOG
 									//LOG(LOG_DEBUG, "Found a duplicate [%s]\n", message.text);
 									log_debug("Found a duplicate [%s]\n", message.text);
 								#endif
                 found_duplicate = true;
             }
             else {
-							#ifdef DEBUG
+							#ifdef LOG
                 // LOG(LOG_DEBUG, "Hash table clash!\n");
                 log_debug("Hash table clash!\n");
 							#endif
@@ -527,10 +531,11 @@ static int sbitx_ft8_decode(float *signal, int num_samples, bool is_ft8)
 
 					char buff[1000];
           sprintf(buff, "%s %3d %+03d %-4.0f ~  %s\n", time_str, 
+          //sprintf(buff, "%s %3d %+03d %-4.0f ~  %s", time_str, 
 						cand->score, cand->snr, freq_hz, message.text);
 
 
-				//message_add(char *mode, unsigned int frequency, int outgoing, char *message);
+					// message_add(char *mode, unsigned int frequency, int outgoing, char *message);
 					message_add("FT8", freq_hz, 0, message.text);
 					if (strstr(buff, mycallsign_upper)){
 						write_console(FONT_FT8_REPLY, buff);
@@ -539,21 +544,21 @@ static int sbitx_ft8_decode(float *signal, int num_samples, bool is_ft8)
 					else 
 						write_console(FONT_FT8_RX, buff);
 
-	//				save_message('R', cand->score, cand-snr,freq_hz, message.text);
+				// save_message('R', cand->score, cand-snr,freq_hz, message.text);
 				n_decodes++;
       }
     }
-		#ifdef DEBUG
-    	//LOG(LOG_INFO, "Decoded %d messages\n", num_decoded);
-    	//log_info("Decoded %d messages\n", num_decoded);
+		#ifdef LOG
+    	// LOG(LOG_INFO, "Decoded %d messages\n", num_decoded);
+    	// log_info("Decoded %d messages", num_decoded);
 		#endif
     monitor_free(&mon);
 
     return n_decodes;
 }
 
-//this variable is a count of number of repititions left for the 
-//current message, it is not the user setting of the same number
+// this variable is a count of number of repititions left for the 
+// current message, it is not the user setting of the same number
 static int ft8_repeat = 5;
 
 int sbitx_ft8_encode(char *message, int32_t freq,  float *signal, bool is_ft4);
@@ -577,7 +582,7 @@ void ft8_setmode(int config){
 
 static void ft8_start_tx(int offset_seconds){
 	char buff[1000];
-	//timestamp the packets for display log
+	// timestamp the packets for display log
 	time_t	rawtime = time(NULL); // time_sbitx();
 	struct tm *t = gmtime(&rawtime);
 
@@ -605,15 +610,15 @@ void ft8_tx(char *message, int freq){
   sprintf(buff, "%02d%02d%02d  TX +00 %04d ~  %s\n", t->tm_hour, t->tm_min, t->tm_sec, ft8_pitch, ft8_tx_text);
 	write_console(FONT_FT8_QUEUED, buff);
 
-	//also set the times of transmission
+	// also set the times of transmission
 	char str_tx1st[10], str_repeat[10];
 	get_field_value_by_label("FT8_TX1ST", str_tx1st);
 	get_field_value_by_label("FT8_REPEAT", str_repeat);
 	int slot_second = time(NULL) /* time_sbitx() */ % 15;
 
-	//the FT8_TX1ST setting is only to initiate a CQ call
-	//if we are not transmitting CQ, then we follow
-	//the slot selected earlier in ft8_process()
+	// the FT8_TX1ST setting is only to initiate a CQ call
+	// if we are not transmitting CQ, then we follow
+	// the slot selected earlier in ft8_process()
 
 	if (!strncmp(message, "CQ", 2)){ 
 		if(!strcmp(str_tx1st, "ON"))
@@ -640,7 +645,8 @@ void ft8_tx(char *message, int freq){
 
 void *ft8_thread_function(void *ptr){
 	FILE *pf;
-	char buff[1000], mycallsign_upper[20]; //there are many ways to crash sbitx, bufferoverflow of callsigns is 1
+	// there are many ways to crash sbitx, buffer overflow of callsigns is 1
+	char buff[1000], mycallsign_upper[20];
 
 	//wake up every 100 msec to see if there is anything to decode
 	while(1){
@@ -651,7 +657,7 @@ void *ft8_thread_function(void *ptr){
 
 		ft8_do_decode = 0;
 		sbitx_ft8_decode(ft8_rx_buffer, ft8_rx_buff_index, true);
-		//let the next batch begin
+		// let the next batch begin
 		ft8_rx_buff_index = 0;
 	}
 }
@@ -664,8 +670,11 @@ void ft8_rx(int32_t *samples, int count){
 
 	//if there is an overflow, then reset to the begining
 	if (ft8_rx_buff_index + (count/decimation_ratio) >= FT8_MAX_BUFF){
-		ft8_rx_buff_index = 0;		
-		printf("Buffer Overflow\n");
+		ft8_rx_buff_index = 0;
+		#ifdef LOG
+			// printf("Buffer Overflow\n");
+			log_info("Buffer Overflow");
+		#endif
 	}
 
 	//down convert to 12000 Hz sampling rate
@@ -683,8 +692,12 @@ void ft8_rx(int32_t *samples, int count){
 	if (slot_second == 0)
 		ft8_rx_buff_index = 0;
 
-//	printf("ft8 decoding trigger index %d, slot_second %d\n", ft8_rx_buff_index, slot_second);
-	//we should have atleast 12 seconds of samples to decode
+	#ifdef LOG
+		// printf("ft8 decoding trigger index %d, slot_second %d\n", ft8_rx_buff_index, slot_second);
+		log_debug("ft8 decoding trigger index %d, slot_second %d\n", ft8_rx_buff_index, slot_second);
+  #endif
+
+	// we should have atleast 12 seconds of samples to decode
 	if (ft8_rx_buff_index >= 13 * 12000 && slot_second > 13)
 		ft8_do_decode = 1;
 }
@@ -882,8 +895,10 @@ void ft8_process(char *message, int operation){
 	char buff[100], reply_message[100], *p;
 	int auto_respond = 0;
 
-	printf("ft8_process:%d[%s]\n", operation, message);
-
+	#ifdef LOG
+		// printf("ft8_process:%d[%s]\n", operation, message);
+		log_info("ft8_process:%d[%s]", operation, message);
+	#endif
 
 	if (ft8_message_tokenize(message) == -1)
 		return;
@@ -915,7 +930,10 @@ void ft8_process(char *message, int operation){
 
 	//by now, any message that comes to us should have our callsign as m1
 	if (strcmp(m1, mycall)){
-		printf("FT8: Not a message for %s\n", mycall);
+		#ifdef LOG
+			// printf("FT8: Not a message for %s\n", mycall);
+			log_debug("FT8: Not a message for %s\n", mycall);
+		#endif
 		return;
 	}
 

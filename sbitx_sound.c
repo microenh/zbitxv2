@@ -8,6 +8,7 @@
 #include "sound.h"
 #include "wiringPi.h"
 #include "sdr.h"
+#include "log.h"
 
 // Set the DEBUG define to 1 to compile in the debugging messages.
 // Set the DEBUG define to 2 to compile in detailed error reporting debugging messages.
@@ -1007,6 +1008,19 @@ int loopback_loop(){
   printf("********Ending loopback thread\n");
 }
 
+// replacement error handling
+void snd_error_handler(const char *file, int line, const char *function, int errcode, const char *fmt, va_list args){
+	#ifdef DEBUG
+		char debug_buffer[15];
+		vsnprintf(debug_buffer, sizeof(debug_buffer), fmt, args);
+		log_info(debug_buffer);
+	#endif
+}
+
+void setup_error_handling(){
+	snd_lib_error_set_local(snd_error_handler);
+}
+
 /*
 We process the sound in a background thread.
 It will call the user-supplied function sound_process()  
@@ -1060,6 +1074,8 @@ void *sound_thread_function(void *ptr){
 	 fprintf(stderr, "*Error opening Loopback Play device - Aborting");
 		return NULL;
 	}
+
+	setup_error_handling();
 	
 	sound_thread_continue = 1;
 	sound_loop();
@@ -1093,6 +1109,7 @@ void *loopback_thread_function(void *ptr){
 	loopback_loop();
 	sound_stop();
 }
+
 
 int sound_thread_start(char *device){
 	q_init(&qloop, 10240);
