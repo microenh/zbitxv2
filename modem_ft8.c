@@ -25,6 +25,8 @@
 #include "ft8_lib/fft/kiss_fftr.h"
 #include "log.h"
 
+#define LOG
+
 static int32_t ft8_rx_buff[FT8_MAX_BUFF];
 static float ft8_rx_buffer[FT8_MAX_BUFF];
 static float ft8_tx_buff[FT8_MAX_BUFF];
@@ -398,163 +400,169 @@ static void monitor_reset(monitor_t* me)
 
 static int sbitx_ft8_decode(float *signal, int num_samples, bool is_ft8)
 {
-    int sample_rate = 12000;
+	int sample_rate = 12000;
 
-		#ifdef LOG
-			// LOG(LOG_DEBUG, "Sample rate %d Hz, %d samples, %.3f seconds\n", sample_rate, num_samples, (double)num_samples / sample_rate);
-			// log_debug("Sample rate %d Hz, %d samples, %.3f seconds\n", sample_rate, num_samples, (double)num_samples / sample_rate);
-		#endif
-    // Compute FFT over the whole signal and store it
-    monitor_t mon;
-    monitor_config_t mon_cfg = {
-        .f_min = 100,
-        .f_max = 3000,
-        .sample_rate = sample_rate,
-        .time_osr = kTime_osr,
-        .freq_osr = kFreq_osr,
-        .protocol = is_ft8 ? PROTO_FT8 : PROTO_FT4
-    };
+	#ifdef LOG
+		// LOG(LOG_DEBUG, "Sample rate %d Hz, %d samples, %.3f seconds\n", sample_rate, num_samples, (double)num_samples / sample_rate);
+		// log_debug("Sample rate %d Hz, %d samples, %.3f seconds\n", sample_rate, num_samples, (double)num_samples / sample_rate);
+	#endif
+	// Compute FFT over the whole signal and store it
+	monitor_t mon;
+	monitor_config_t mon_cfg = {
+			.f_min = 100,
+			.f_max = 3000,
+			.sample_rate = sample_rate,
+			.time_osr = kTime_osr,
+			.freq_osr = kFreq_osr,
+			.protocol = is_ft8 ? PROTO_FT8 : PROTO_FT4
+	};
 
-		//timestamp the packets
-		//the time is shifted back by the time it took to capture these sameples
-		time_t	rawtime = (time(NULL) /* time_sbitx() */ / 15) * 15; //round to the earlier slot
-		char time_str[20], response[100];
-		struct tm *t = gmtime(&rawtime);
-		sprintf(time_str, "%02d%02d%02d", t->tm_hour, t->tm_min, t->tm_sec);
+	//timestamp the packets
+	//the time is shifted back by the time it took to capture these sameples
+	time_t	rawtime = (time(NULL) /* time_sbitx() */ / 15) * 15; //round to the earlier slot
+	char time_str[20], response[100];
+	struct tm *t = gmtime(&rawtime);
+	sprintf(time_str, "%02d%02d%02d", t->tm_hour, t->tm_min, t->tm_sec);
 
-		int i;
-		char mycallsign_upper[20];
-		char mycallsign[20];
-		get_field_value("#mycallsign", mycallsign);
-		for (i = 0; i < strlen(mycallsign); i++)
-			mycallsign_upper[i] = toupper(mycallsign[i]);
-		mycallsign_upper[i] = 0;	
+	int i;
+	char mycallsign_upper[20];
+	char mycallsign[20];
+	get_field_value("#mycallsign", mycallsign);
+	for (i = 0; i < strlen(mycallsign); i++)
+		mycallsign_upper[i] = toupper(mycallsign[i]);
+	mycallsign_upper[i] = 0;	
 
-    monitor_init(&mon, &mon_cfg);
+	monitor_init(&mon, &mon_cfg);
 
-    // Process the waveform data frame by frame - you could have a live loop here with data from an audio device
-    for (int frame_pos = 0; frame_pos + mon.block_size <= num_samples; frame_pos += mon.block_size)
-        monitor_process(&mon, signal + frame_pos);
-		#ifdef LOG 
-			// LOG(LOG_DEBUG, "Waterfall accumulated %d symbols\n", mon.wf.num_blocks);
-			// LOG(LOG_INFO, "Max magnitude: %.1f dB\n", mon.max_mag);
-			// log_debug( "Waterfall accumulated %d symbols\n", mon.wf.num_blocks);
-			// log_info( "Max magnitude: %.1f dB\n", mon.max_mag);
-		#endif
-    // Find top candidates by Costas sync score and localize them in time and frequency
-    candidate_t candidate_list[kMax_candidates];
-    int num_candidates = ft8_find_sync(&mon.wf, kMax_candidates, candidate_list, kMin_score);
+	// Process the waveform data frame by frame - you could have a live loop here with data from an audio device
+	for (int frame_pos = 0; frame_pos + mon.block_size <= num_samples; frame_pos += mon.block_size)
+			monitor_process(&mon, signal + frame_pos);
+	#ifdef LOG 
+		// LOG(LOG_DEBUG, "Waterfall accumulated %d symbols\n", mon.wf.num_blocks);
+		// LOG(LOG_INFO, "Max magnitude: %.1f dB\n", mon.max_mag);
+		// log_debug( "Waterfall accumulated %d symbols\n", mon.wf.num_blocks);
+		// log_info( "Max magnitude: %.1f dB\n", mon.max_mag);
+	#endif
+	// Find top candidates by Costas sync score and localize them in time and frequency
+	candidate_t candidate_list[kMax_candidates];
+	int num_candidates = ft8_find_sync(&mon.wf, kMax_candidates, candidate_list, kMin_score);
 
-    // Hash table for decoded messages (to check for duplicates)
-    int num_decoded = 0;
-    message_t decoded[kMax_decoded_messages];
-    message_t* decoded_hashtable[kMax_decoded_messages];
+	// Hash table for decoded messages (to check for duplicates)
+	int num_decoded = 0;
+	message_t decoded[kMax_decoded_messages];
+	message_t* decoded_hashtable[kMax_decoded_messages];
 
-    // Initialize hash table pointers
-    for (int i = 0; i < kMax_decoded_messages; ++i)
-    {
-        decoded_hashtable[i] = NULL;
-    }
+	// Initialize hash table pointers
+	for (int i = 0; i < kMax_decoded_messages; ++i)
+	{
+		decoded_hashtable[i] = NULL;
+	}
 
-		int n_decodes = 0;
-    // Go over candidates and attempt to decode messages
-    for (int idx = 0; idx < num_candidates; ++idx)
-    {
-        const candidate_t* cand = &candidate_list[idx];
-        if (cand->score < kMin_score)
-            continue;
-
-        float freq_hz = (cand->freq_offset + (float)cand->freq_sub / mon.wf.freq_osr) / mon.symbol_period;
-        float time_sec = (cand->time_offset + (float)cand->time_sub / mon.wf.time_osr) * mon.symbol_period;
-
-        message_t message;
-        decode_status_t status;
-				if (!ft8_decode(&mon.wf, cand, &message, kLDPC_iterations, &status)){
-					// printf("000000 %3d %+4.2f %4.0f ~  ---\n", cand->score, time_sec, freq_hz);
-					if (status.ldpc_errors > 0){
-						#ifdef LOG
-							//LOG(LOG_DEBUG, "LDPC decode: %d errors\n", status.ldpc_errors);
-							log_debug("LDPC decode: %d errors\n", status.ldpc_errors);
-						#endif
-					} else if (status.crc_calculated != status.crc_extracted){
-						#ifdef LOG
-							//LOG(LOG_DEBUG, "CRC mismatch!\n");
-							log_debug("CRC mismatch!\n");
-						#endif
-					} else if (status.unpack_status != 0){
-						#ifdef LOG
-							//LOG(LOG_DEBUG, "Error while unpacking!\n");
-							log_debug("Error while unpacking!\n");
-						#endif
-					}
+	int n_decodes = 0;
+	// Go over candidates and attempt to decode messages
+	for (int idx = 0; idx < num_candidates; ++idx)
+	{
+			const candidate_t* cand = &candidate_list[idx];
+			if (cand->score < kMin_score)
 					continue;
-        }
 
-				#ifdef LOG
-        	//LOG(LOG_DEBUG, "Checking hash table for %4.1fs / %4.1fHz [%d]...\n", time_sec, freq_hz, cand->score);
-        	log_debug("Checking hash table for %4.1fs / %4.1fHz [%d]...\n", time_sec, freq_hz, cand->score);
-				#endif
-        int idx_hash = message.hash % kMax_decoded_messages;
-        bool found_empty_slot = false;
-        bool found_duplicate = false;
-        do {
-            if (decoded_hashtable[idx_hash] == NULL) {
-							#ifdef LOG
-                //LOG(LOG_DEBUG, "Found an empty slot\n");
-                log_debug("Found an empty slot\n");
-							#endif
-              found_empty_slot = true;
-            }
-            else if ((decoded_hashtable[idx_hash]->hash == message.hash)
-								 && (0 == strcmp(decoded_hashtable[idx_hash]->text, message.text))) {
-                #ifdef LOG
-									//LOG(LOG_DEBUG, "Found a duplicate [%s]\n", message.text);
-									log_debug("Found a duplicate [%s]\n", message.text);
-								#endif
-                found_duplicate = true;
-            }
-            else {
-							#ifdef LOG
-                // LOG(LOG_DEBUG, "Hash table clash!\n");
-                log_debug("Hash table clash!\n");
-							#endif
-              // Move on to check the next entry in hash table
-              idx_hash = (idx_hash + 1) % kMax_decoded_messages;
-            }
-        } while (!found_empty_slot && !found_duplicate);
+			float freq_hz = (cand->freq_offset + (float)cand->freq_sub / mon.wf.freq_osr) / mon.symbol_period;
+			float time_sec = (cand->time_offset + (float)cand->time_sub / mon.wf.time_osr) * mon.symbol_period;
 
-        if (found_empty_slot) {
-           // Fill the empty hashtable slot
-           memcpy(&decoded[idx_hash], &message, sizeof(message));
-           decoded_hashtable[idx_hash] = &decoded[idx_hash];
-           ++num_decoded;
+			message_t message;
+			decode_status_t status;
+			if (!ft8_decode(&mon.wf, cand, &message, kLDPC_iterations, &status)){
+				// printf("000000 %3d %+4.2f %4.0f ~  ---\n", cand->score, time_sec, freq_hz);
+				if (status.ldpc_errors > 0){
+					#ifdef LOG
+						//LOG(LOG_DEBUG, "LDPC decode: %d errors\n", status.ldpc_errors);
+						log_debug("LDPC decode: %d errors\n", status.ldpc_errors);
+					#endif
+				} else if (status.crc_calculated != status.crc_extracted){
+					#ifdef LOG
+						//LOG(LOG_DEBUG, "CRC mismatch!\n");
+						log_debug("CRC mismatch!\n");
+					#endif
+				} else if (status.unpack_status != 0){
+					#ifdef LOG
+						//LOG(LOG_DEBUG, "Error while unpacking!\n");
+						log_debug("Error while unpacking!\n");
+					#endif
+				}
+				continue;
+			}
 
-					char buff[1000];
-          sprintf(buff, "%s %3d %+03d %-4.0f ~  %s\n", time_str, 
-          //sprintf(buff, "%s %3d %+03d %-4.0f ~  %s", time_str, 
-						cand->score, cand->snr, freq_hz, message.text);
-
-
-					// message_add(char *mode, unsigned int frequency, int outgoing, char *message);
-					message_add("FT8", freq_hz, 0, message.text);
-					if (strstr(buff, mycallsign_upper)){
-						write_console(FONT_FT8_REPLY, buff);
-						ft8_process(buff, FT8_CONTINUE_QSO);
+			#ifdef LOG
+				//LOG(LOG_DEBUG, "Checking hash table for %4.1fs / %4.1fHz [%d]...\n", time_sec, freq_hz, cand->score);
+				log_debug("Checking hash table for %4.1fs / %4.1fHz [%d]...\n", time_sec, freq_hz, cand->score);
+			#endif
+			int idx_hash = message.hash % kMax_decoded_messages;
+			bool found_empty_slot = false;
+			bool found_duplicate = false;
+			do {
+					if (decoded_hashtable[idx_hash] == NULL) {
+						#ifdef LOG
+							//LOG(LOG_DEBUG, "Found an empty slot\n");
+							log_debug("Found an empty slot\n");
+						#endif
+						found_empty_slot = true;
 					}
-					else 
-						write_console(FONT_FT8_RX, buff);
+					else if ((decoded_hashtable[idx_hash]->hash == message.hash)
+							 && (0 == strcmp(decoded_hashtable[idx_hash]->text, message.text))) {
+							#ifdef LOG
+								//LOG(LOG_DEBUG, "Found a duplicate [%s]\n", message.text);
+								log_debug("Found a duplicate [%s]\n", message.text);
+							#endif
+							found_duplicate = true;
+					}
+					else {
+						#ifdef LOG
+							// LOG(LOG_DEBUG, "Hash table clash!\n");
+							log_debug("Hash table clash!\n");
+						#endif
+						// Move on to check the next entry in hash table
+						idx_hash = (idx_hash + 1) % kMax_decoded_messages;
+					}
+			} while (!found_empty_slot && !found_duplicate);
+
+			char buff[1000];
+			if (found_empty_slot) {
+				// Fill the empty hashtable slot
+				memcpy(&decoded[idx_hash], &message, sizeof(message));
+				decoded_hashtable[idx_hash] = &decoded[idx_hash];
+				++num_decoded;
+
+				sprintf(buff, "%s %3d %+03d %-4.0f ~  %s\n", time_str, 
+				// sprintf(buff, "%s %3d %+03d %-4.0f ~  %s ", time_str, 
+					cand->score, cand->snr, freq_hz, message.text);
+
+				// message_add(char *mode, unsigned int frequency,
+				//	int outgoing, char *message);
+				message_add("FT8", freq_hz, 0, message.text);
+				if (strstr(buff, mycallsign_upper)){
+						write_console(FONT_FT8_REPLY, buff);
+						#ifdef LOG
+							log_info("3: %s", buff);
+						#endif
+						ft8_process(buff, FT8_CONTINUE_QSO);
+						#ifdef LOG
+							log_info("4: %s", buff);
+						#endif
+				}
+				else 
+					write_console(FONT_FT8_RX, buff);
 
 				// save_message('R', cand->score, cand-snr,freq_hz, message.text);
 				n_decodes++;
-      }
-    }
+			}
+		}
 		#ifdef LOG
-    	// LOG(LOG_INFO, "Decoded %d messages\n", num_decoded);
-    	// log_info("Decoded %d messages", num_decoded);
+			// LOG(LOG_INFO, "Decoded %d messages\n", num_decoded);
+			// log_info("Decoded %d messages", num_decoded);
 		#endif
-    monitor_free(&mon);
+		monitor_free(&mon);
 
-    return n_decodes;
+		return n_decodes;
 }
 
 // this variable is a count of number of repititions left for the 
@@ -747,8 +755,8 @@ float ft8_next_sample(){
 }
 
 /* these are used to process the current message */
-static char m1[32], m2[32], m3[32], m4[32], signal_strength[10], mygrid[10],
-	reply_message[100];
+static char m1[32], m2[32], m3[32], m4[32],
+	signal_strength[10], mygrid[10], reply_message[100];
 static int rx_pitch, tx_pitch, confidence_score, msg_time; 
 static const char *call, *exchange, *report_send, *report_received, *mycall;
 
@@ -760,17 +768,34 @@ int ft8_message_tokenize(char *message){
 	if (!p) return -1;
 	msg_time = atoi(p);
 
+	#ifdef LOG
+		log_debug("time: %d", msg_time);
+	#endif
+
 	p = strtok(NULL, " \r\n");
 	if (!p) return -1;
+
 	confidence_score = atoi(p);
 
+	#ifdef LOG
+		log_debug("confidence: %d", confidence_score);
+	#endif
+	
 	p = strtok(NULL, " \r\n");
 	if (!p) return -1;
 	strcpy(signal_strength, p);
 
+	#ifdef LOG
+		log_debug("signal: %s", signal_strength);
+	#endif
+
 	p = strtok(NULL, " \r\n");
 	if (!p) return -1;
 	rx_pitch = atoi(p);
+
+	#ifdef LOG
+		log_debug("rx_pitch: %d", rx_pitch);
+	#endif
 
 	//santiy check, we should get a tilde '~' now
 	p = strtok(NULL, " \r\n");
@@ -779,27 +804,47 @@ int ft8_message_tokenize(char *message){
 	if (strcmp(p, "~"))
 		return -1;
 
+	#ifdef LOG
+		log_debug("tilde: %s", p);
+	#endif
+
 	p = strtok(NULL, " \r\n");
 	if (!p) return -1;
 	strcpy(m1, p);
+
+	#ifdef LOG
+		log_debug("m1: %s", m1);
+	#endif
 
 	p = strtok(NULL, " \r\n");
 	if (!p) return -1;
 	strcpy(m2, p);
 
+	#ifdef LOG
+		log_debug("m2: %s", m2);
+	#endif
+
 	p = strtok(NULL, " \r\n");
 	if (p){
 		strcpy(m3, p);
+		#ifdef LOG
+			log_debug("m3: %s", m3);
+		#endif
 
 		p = strtok(NULL, " \r\n");
 		if (p){
 			strcpy(m4, p);
+			#ifdef LOG
+				log_debug("m4: %s", m4);
+			#endif
 		}
 		else 
 			m4[0] = 0;
 	}
-	else
+	else {
 		m3[0] = 0;
+		m4[0] = 0;
+	}
 
 	return 0;
 }

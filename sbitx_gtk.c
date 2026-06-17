@@ -49,6 +49,8 @@ The initial sync between the gui values, the core radio values, settings, et al 
 #include "hist_disp.h"
 // #include "ntputil.h"
 
+#define LOG
+
 #define FT8_START_QSO 1
 #define FT8_CONTINUE_QSO 0
 void ft8_process(char *received, int operation);
@@ -1107,16 +1109,20 @@ int console_init_next_line(){
 }
 
 void write_console(int style, char *raw_text){
-	/*char directory[200];	//dangerous, find the MAX_PATH and replace 200 with it
-	char *path = getenv("HOME");
-	strcpy(directory, path);
-	strcat(directory, "/sbitx/data/display_log.txt");
-    */
-    //tlog("write_console", text, style);
+	#if 0
+  	char directory[200];
+		//dangerous, find the MAX_PATH and replace 200 with it
+		char *path = getenv("HOME");
+		strcpy(directory, path);
+		strcat(directory, "/sbitx/data/display_log.txt");
+  #endif
+
+  // tlog("write_console", text, style);
 
 	#ifdef LOG
 		log_debug("write_console [%s], %d", raw_text, style);
 	#endif
+
 	char *text;
 	char decorated[1000];
 	char remote_text[2000];

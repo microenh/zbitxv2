@@ -1,7 +1,7 @@
 TARGET = sbitx
 
 CC      = gcc
-CFLAGS  = -g $(shell pkg-config --cflags gtk+-3.0) -DLOG
+CFLAGS  = -g $(shell pkg-config --cflags gtk+-3.0)
 
 LDFLAGS =    \
 	-lasound   \

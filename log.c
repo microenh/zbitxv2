@@ -166,3 +166,9 @@ void log_log(int level, const char *file, int line, const char *fmt, ...) {
 
   unlock();
 }
+
+char _fmt_buf[80];
+char *do_fmt(const char *fmt, va_list args){
+	vsnprintf(_fmt_buf, sizeof(_fmt_buf), fmt, args);
+	return _fmt_buf;
+}

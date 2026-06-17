@@ -52,4 +52,6 @@ int log_add_fp(FILE *fp, int level);
 
 void log_log(int level, const char *file, int line, const char *fmt, ...);
 
+char *do_fmt(const char *fmt, va_list args);
+
 #endif
