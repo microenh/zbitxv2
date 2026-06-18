@@ -572,7 +572,7 @@ static int sbitx_ft8_decode(float *signal, int num_samples, bool is_ft8)
 				message_add("FT8", freq_hz, 0, message.text);
 
 				#ifdef LOG
-					log_debug("Buff: [%s]", buff);
+					log_debug("Buff: %d [%s]", strlen(buff), buff);
 				#endif
 
 				if (strstr(buff, mycallsign_upper)){

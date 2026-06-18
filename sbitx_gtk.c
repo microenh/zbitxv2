@@ -4887,17 +4887,20 @@ void pre_ft8_check(char* message) {
 	if (get_ft8_callsign(message, other_callsign) >= 0) {
 		//strcpy(result,"FT8_check_res ");
 		int cnt = logbook_prev_log(other_callsign, result);
-		char *p =strchr(message, '~');
+		char *p = strchr(message, '~');
 		if (p) {
 			strcat(result, p-1);
 		}
 
-		printf("pre_ft8_check: '%s'\n", result);
+		#ifdef LOG
+			// printf("pre_ft8_check: '%s'\n", result);
+			log_info("pre_ft8_check: [%s]", result);
+		#endif
 
 		if (strlen(result) > 127 ) {
 			result[127] = 0;
 		}
-        int equal_last_check = strcmp(get_field("#ft8_check")->value, result);
+    int equal_last_check = strcmp(get_field("#ft8_check")->value, result);
 		set_field("#ft8_check", result);
 
 		if (cnt == 0 || equal_last_check == 0) {
@@ -5145,10 +5148,11 @@ void ensure_single_instance(){
 }
 
 int main( int argc, char* argv[] ) {
+	// clear screen
+	puts("\033[2J\033[H" VER_STR "\n");
 
 	log_set_level(LOG_INFO);
 
-	puts(VER_STR);
 	active_layout = main_controls;
 
 	//unlink any pending ft8 transmission

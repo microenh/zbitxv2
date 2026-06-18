@@ -21,8 +21,10 @@
 // #include "i2cbb.h"
 #include "si5351.h"
 #include "ini.h"
+#include "log.h"
 int set_field(char *, char *);  // This should be moved to a .h file
 
+#define LOG
 #define DEBUG 0
 
 char audio_card[32];
@@ -146,13 +148,20 @@ void radio_tune_to(u_int32_t f){
 	else
   	si5351bx_setfreq(2, f + bfo_freq - freq_shift + TUNING_SHIFT);
 
-//  printf("Setting radio rx_pitch %d\n", rx_pitch);
+	#ifdef LOG
+		// printf("Setting radio rx_pitch %d\n", rx_pitch);
+		log_debug("Setting radio rx_pitch %d", rx_pitch);
+	#endif
 }
 
 void fft_init(){
 	// int mem_needed;
 
-	//printf("initializing the fft\n");
+	#ifdef LOG
+		//printf("initializing the fft\n");
+		log_debug("initializing the fft");
+	#endif
+
 	fflush(stdout);
 
 	// mem_needed = sizeof(fftw_complex) * MAX_BINS;
@@ -170,12 +179,19 @@ void fft_init(){
 	fftw_set_timelimit(PLANTIME);
 	fftwf_set_timelimit(PLANTIME);
 	int e = fftw_import_wisdom_from_filename(wisdom_file);
-	if (e == 0)
-	{
-		printf("Generating Wisdom File...\n");
-	}
-	plan_fwd = fftw_plan_dft_1d(MAX_BINS, fft_in, fft_out, FFTW_FORWARD, WISDOM_MODE); // Was FFTW_ESTIMATE N3SB
-	plan_spectrum = fftw_plan_dft_1d(MAX_BINS, fft_in, fft_spectrum, FFTW_FORWARD, WISDOM_MODE); // Was FFTW_ESTIMATE N3SB
+
+	#ifdef LOG
+		if (!e) {
+			// printf("Generating Wisdom File...\n");
+			log_info("Generating Wisdom File...");
+		}
+	#endif
+
+	// Was FFTW_ESTIMATE N3SB
+	plan_fwd = fftw_plan_dft_1d(MAX_BINS, fft_in, fft_out, FFTW_FORWARD, WISDOM_MODE);
+	// Was FFTW_ESTIMATE N3SB
+	plan_spectrum = fftw_plan_dft_1d(MAX_BINS, fft_in, fft_spectrum, FFTW_FORWARD, WISDOM_MODE);
+
 	fftw_export_wisdom_to_filename(wisdom_file);
 
 	//zero up the previous 'M' bins
@@ -195,11 +211,13 @@ void fft_reset_m_bins(){
 	memset(fft_spectrum, 0, sizeof(fftw_complex) * MAX_BINS);
 	memset(tx_list->fft_time, 0, sizeof(fftw_complex) * MAX_BINS);
 	memset(tx_list->fft_freq, 0, sizeof(fftw_complex) * MAX_BINS);
-/*	for (int i= 0; i < MAX_BINS/2; i++){
-		__real__ fft_m[i]  = 0.0;
-		__imag__ fft_m[i]  = 0.0;
-	}
-*/
+
+	#if 0
+		for (int i= 0; i < MAX_BINS/2; i++){
+			__real__ fft_m[i]  = 0.0;
+			__imag__ fft_m[i]  = 0.0;
+		}
+	#endif
 }
 
 int mag2db(double mag){
@@ -313,23 +331,25 @@ void set_lpf_40mhz(int frequency){
 		lpf = LPF_D;
 	else if (frequency < 10500000)		
 		lpf = LPF_C;
-//	else if (frequency < 21500000 && sbitx_version >= 4)
-//		lpf = LPF_B;
+	// else if (frequency < 21500000 && sbitx_version >= 4)
+	//	 lpf = LPF_B;
 	else if (frequency < 18500000)		
 		lpf = LPF_B;
 	else if (frequency < 30000000) 
 		lpf = LPF_A; 
 
 	if (lpf == prev_lpf){
-#if DEBUG > 0		
-		puts("LPF not changed");
-#endif		
+		#if DEBUG > 0	&& defined(LOG)
+			// puts("LPF not changed");
+			log_info("LPF not changed");
+		#endif		
 		return;
 	}
 	
-#if DEBUG > 0
-	printf("##################Setting LPF to %d\n", lpf);
-#endif
+	#if DEBUG > 0 && defined(LOG)
+		// printf("##################Setting LPF to %d\n", lpf);
+		log_info("##################Setting LPF to %d", lpf);
+	#endif
 
   digitalWrite(LPF_A, LOW);
   digitalWrite(LPF_B, LOW);
@@ -337,16 +357,19 @@ void set_lpf_40mhz(int frequency){
   digitalWrite(LPF_D, LOW);
   digitalWrite(LPF_E, LOW);
 
-#if DEBUG > 0
-  printf("################ setting %d high\n", lpf);
-#endif 
+	#if DEBUG > 0 && defined(LOG)
+  	// printf("################ setting %d high\n", lpf);
+  	log_info("################ setting %d high", lpf);
+	#endif
+ 
   digitalWrite(lpf, HIGH); 
 	prev_lpf = lpf;
 }
 
 
 void set_rx1(int frequency){
-	static int last_frequency;		// Holds the last frequency set - used by the Auto IF Gain algorithm
+	// Holds the last frequency set - used by the Auto IF Gain algorithm
+	static int last_frequency;
 
 	last_frequency = frequency;
 	if (frequency == freq_hdr)
@@ -456,11 +479,16 @@ struct rx *add_tx(int frequency, short mode, int bpf_low, int bpf_high){
 	r->fft_freq = (fftw_complex*) fftw_malloc(sizeof(fftw_complex) * MAX_BINS);
 	
 	int e = fftw_import_wisdom_from_filename(wisdom_file);
-	if (e == 0)
-	{
-		printf("Generating Wisdom File...\n");
-	}	
-	r->plan_rev = fftw_plan_dft_1d(MAX_BINS, r->fft_freq, r->fft_time, FFTW_BACKWARD, WISDOM_MODE); // Was FFTW_ESTIMATE N3SB
+	#ifdef LOG
+		if (!e)
+		{
+			// printf("Generating Wisdom File...\n");
+			log_info("Generating Wisdom File...");
+		}
+	#endif
+	// Was FFTW_ESTIMATE N3SB
+	r->plan_rev = fftw_plan_dft_1d(MAX_BINS, r->fft_freq,
+		r->fft_time, FFTW_BACKWARD, WISDOM_MODE);
 	fftw_export_wisdom_to_filename(wisdom_file);
 	
 	r->output = 0;
@@ -504,11 +532,16 @@ struct rx *add_rx(int frequency, short mode, int bpf_low, int bpf_high){
 	r->fft_freq = (fftw_complex*) fftw_malloc(sizeof(fftw_complex) * MAX_BINS);
 	
 	int e = fftw_import_wisdom_from_filename(wisdom_file);
-	if (e == 0)
-	{
-		printf("Generating Wisdom File...\n");
-	}	
-	r->plan_rev = fftw_plan_dft_1d(MAX_BINS, r->fft_freq, r->fft_time, FFTW_BACKWARD, WISDOM_MODE);  // Was FFTW_ESTIMATE N3SB
+	#ifdef LOG
+		if (!e)
+		{
+			// printf("Generating Wisdom File...\n");
+			log_info("Generating Wisdom File...");
+		}	
+	#endif
+	// Was FFTW_ESTIMATE N3SB
+	r->plan_rev = fftw_plan_dft_1d(MAX_BINS,
+		r->fft_freq, r->fft_time, FFTW_BACKWARD, WISDOM_MODE);
 	fftw_export_wisdom_to_filename(wisdom_file);
 	
 	r->output = 0;
@@ -536,7 +569,6 @@ struct rx *add_rx(int frequency, short mode, int bpf_low, int bpf_high){
 
 	r->next = rx_list;
 	rx_list = r;
-
 }
 
 
@@ -568,7 +600,13 @@ double agc2(struct rx *r){
 	else
 		agc_gain_should_be = 100000000000/signal_strength;
 	r->signal_strength = signal_strength;
-//	printf("Agc temp, g:%g, s:%g, f:%g ", r->agc_gain, signal_strength, agc_gain_should_be);
+
+	#ifdef LOG
+		// printf("Agc temp, g:%g, s:%g, f:%g ", r->agc_gain,
+		//	signal_strength, agc_gain_should_be);
+		log_debug("Agc temp, g:%g, s:%g, f:%g ", r->agc_gain,
+			signal_strength, agc_gain_should_be);
+	#endif
 
 	double agc_ramp = 0.0;
 
@@ -594,7 +632,13 @@ double agc2(struct rx *r){
 
   r->agc_loop--;
 
-	//printf("%d:s meter: %d %d %d \n", count++, (int)r->agc_gain, (int)r->signal_strength, r->agc_loop);
+	#ifdef LOG
+		// printf("%d:s meter: %d %d %d \n", count++,
+		//	(int)r->agc_gain, (int)r->signal_strength, r->agc_loop);
+		log_debug("%d:s meter: %d %d %d \n", count++,
+			(int)r->agc_gain, (int)r->signal_strength, r->agc_loop);
+	#endif
+
   return 100000000000 / r->agc_gain;  
 }
 
@@ -734,9 +778,13 @@ void rx_linear(int32_t *input_rx,  int32_t *input_mic,
 		mute_count--;
 	}
 
-	//push the data to any potential modem 
+	// push the data to any potential modem 
 	modem_rx(rx_list->mode, output_speaker, MAX_BINS/2);
-	//printf("S meter: %d\n", calculate_s_meter(r));
+	
+	#ifdef LOG
+		// printf("S meter: %d\n", calculate_s_meter(r));
+		log_debug("S meter: %d", calculate_s_meter(r));
+	#endif
 }
 
 #if 0
@@ -767,14 +815,23 @@ void read_power(){
 	int rf_v_p2p = (fwdvoltage * 126)/400;
 	if (rf_v_p2p > 135 && !in_calibration){
 		alc_level *= 135.0 / (1.0 * rf_v_p2p);
-		printf("ALC tripped, to %d percent\n", (int)(100 * alc_level));
+		#ifdef LOG
+			// printf("ALC tripped, to %d percent\n", (int)(100 * alc_level));
+			log_debug("ALC tripped, to %d percent", (int)(100 * alc_level));
+		#endif
 	}
 	/* else if (alc_level < 0.95){
-		printf("alc releasing to ");
+		#ifdef LOG
+			// printf("alc releasing to ");
+			log_debug("alc releasing to ");
+		#endif
 		alc_level *= 1.02;
 	}
 	*/
-	//	printf("alc: %g\n", alc_level);
+	#ifdef LOG
+		// printf("alc: %g\n", alc_level);
+		log_debug("alc: %g", alc_level);
+	#endif
 }
 #endif
 
@@ -1051,7 +1108,12 @@ static void read_hw_ini(){
 	strcpy(directory, path);
 	strcat(directory, "/sbitx/data/hw_settings.ini");
   if (ini_parse(directory, hw_settings_handler, NULL)<0){
-    printf("Unable to load ~/sbitx/data/hw_settings.ini\nLoading default_hw_settings.ini instead\n");
+		#ifdef LOG
+			// printf("Unable to load ~/sbitx/data/hw_settings.ini\n"
+			//	"Loading default_hw_settings.ini instead\n");
+			log_warn("Unable to load ~/sbitx/data/hw_settings.ini");
+			log_warn("Loading default_hw_settings.ini instead");
+		#endif
 		strcpy(directory, path);
 		strcat(directory, "/sbitx/data/default_hw_settings.ini");
   	ini_parse(directory, hw_settings_handler, NULL);
@@ -1059,9 +1121,9 @@ static void read_hw_ini(){
 }
 
 /*
-	 the PA gain varies across the band from 3.5 MHz to 30 MHz
- 	here we adjust the drive levels to keep it up, almost level
-*/
+ * the PA gain varies across the band from 3.5 MHz to 30 MHz
+ * here we adjust the drive levels to keep it up, almost level
+ */
 void set_tx_power_levels(){
 	//int tx_power_gain = 0;
 
@@ -1074,9 +1136,12 @@ void set_tx_power_levels(){
 			tx_amp = (1.0 * tx_drive * band_power[i].scale);  
 		}	
 	}
-	//printf("tx_amp is set to %g for %d drive\n", tx_amp, tx_drive);
-	//we keep the audio card output 'volume' constant'
-// Set a level for transmitting - right channel
+	#ifdef LOG
+		// printf("tx_amp is set to %g for %d drive\n", tx_amp, tx_drive);
+		log_debug("tx_amp is set to %g for %d drive", tx_amp, tx_drive);
+	#endif
+	// we keep the audio card output 'volume' constant'
+	// Set a level for transmitting - right channel
 	sound_mixer(audio_card, "Master", 95);
 	sound_mixer(audio_card, "Capture", tx_gain);
 	alc_level = 1.0;
@@ -1087,7 +1152,12 @@ void set_tx_power_levels(){
 void calibrate_band_power(struct power_settings *b){
 	
 	set_rx1(b->f_start + 35000);
-	printf("*calibrating for %d\n", freq_hdr);
+	
+	#ifdef LOG
+		// printf("*calibrating for %d\n", freq_hdr);
+		log_info("*calibrating for %d", freq_hdr);
+	#endif
+
 	tx_list->mode = MODE_CALIBRATE;
 	tx_drive = 100;
 
@@ -1112,16 +1182,30 @@ void calibrate_band_power(struct power_settings *b){
 		//take many readings to get a peak
 		for (j = 0; j < 10; j++){
 			delay(20);
-			avg += fwdpower /10; //fwdpower in 1/10th of a watt
-//			printf("  avg %d, fwd %d scale %g\n", avg, fwdpower, b->scale);
+			avg += fwdpower /10; // fwdpower in 1/10th of a watt
+
+			#ifdef LOG
+				// printf("  avg %d, fwd %d scale %g\n", avg, fwdpower, b->scale);
+				log_debug("avg %d, fwd %d scale %g", avg, fwdpower, b->scale);
+			#endif
 		}
 		avg /= 10;
-		printf("*%d, f %d : avg %d, max = %d\n", i, b->f_start, avg, b->max_watts);
+
+		#ifdef LOG
+			// printf("*%d, f %d : avg %d, max = %d\n", i, b->f_start, avg, b->max_watts);
+			log_info("*%d, f %d : avg %d, max = %d", i, b->f_start, avg, b->max_watts);
+		#endif
+
 		if (avg >= b->max_watts)
 				break;
 	}
 	tr_switch(0);
-	printf("*tx scale for %d is set to %g\n", b->f_start, b->scale);
+	
+	#ifdef LOG
+		// printf("*tx scale for %d is set to %g\n", b->f_start, b->scale);
+		log_info("*tx scale for %d is set to %g\n", b->f_start, b->scale);
+	#endif
+
 	delay(100);	
 }
 
@@ -1135,7 +1219,10 @@ static void save_hw_settings(){
 
 	FILE *f = fopen(file_path, "w");
 	if (!f){
-		printf("Unable to save %s : %s\n", file_path, strerror(errno));
+		#ifdef LOG
+			// printf("Unable to save %s : %s\n", file_path, strerror(errno));
+			log_warn("Unable to save %s : %s", file_path, strerror(errno));
+		#endif
 		return;
 	}
 
@@ -1167,11 +1254,19 @@ void *calibration_thread_function(void *server){
 	tx_list->mode = old_mode;
 	tx_drive = old_tx_drive;
 	save_hw_settings();
-	printf("*Finished band power calibrations\n");
+	
+	#ifdef LOG
+		// printf("*Finished band power calibrations\n");
+		log_info("*Finished band power calibrations");
+	#endif
 }
 
 void tx_cal(){
-	printf("*Starting tx calibration, with dummy load connected\n");
+	#ifdef LOG
+		// printf("*Starting tx calibration, with dummy load connected\n");
+		log_info("*Starting tx calibration, with dummy load connected");
+	#endif
+
  	pthread_create( &calibration_thread, NULL, calibration_thread_function, 
 		(void*)NULL);
 }
@@ -1377,7 +1472,10 @@ This is the one-time initialization code
 */
 void setup(char *audio_output_device){
 
-	printf("Audio Output Device is: %s\n", audio_output_device);
+	#ifdef LOG
+		// printf("Audio Output Device is: %s\n", audio_output_device);
+		log_info("Audio Output Device is: %s", audio_output_device);
+	#endif
 
 	read_hw_ini();
 
@@ -1417,7 +1515,10 @@ void setup(char *audio_output_device){
 	//	else
 	//		sbitx_version = SBITX_V2;
 	//}
-	printf("hw version: %d\n", sbitx_version);
+	#ifdef LOG
+		// printf("hw version: %d\n", sbitx_version);
+		log_info("hw version: %d", sbitx_version);
+	#endif
 
 	setup_audio_codec();
  	sound_thread_start("plughw:0,0");	
@@ -1452,7 +1553,10 @@ void sdr_request(char *request, char *response){
 	else if (!strcmp(cmd, "r1:freq")){
 		int d = atoi(value);
 		set_rx1(d);
-		//printf("Frequency set to %d\n", freq_hdr);
+		#ifdef LOG
+			// printf("Frequency set to %d\n", freq_hdr);
+			log_debug("Frequency set to %d", freq_hdr);
+		#endif
 		strcpy(response, "ok");	
 	} 
 	else if (!strcmp(cmd, "smeter")){
@@ -1529,8 +1633,11 @@ void sdr_request(char *request, char *response){
 		int f = freq_hdr;
 		set_rx1(f-10);
 		set_rx1(f);
-	
-		//printf("mode set to %d\n", rx_list->mode);
+
+		#ifdef LOG	
+			// printf("mode set to %d\n", rx_list->mode);
+			log_debug("mode set to %d", rx_list->mode);
+		#endif
 		strcpy(response, "ok");
 	}
 	else if (!strcmp(cmd, "txmode")){
@@ -1579,10 +1686,14 @@ void sdr_request(char *request, char *response){
 		rx_vol = atoi(value);
 		if(!in_tx)
 		{
-//			printf("Audio Card: %s\n", audio_card);		// N3SB Hack
-// Set a level for receiver volume - left channel
+			#ifdef LOG
+				// printf("Audio Card: %s\n", audio_card);		// N3SB Hack
+				log_debug("Audio Card: %s", audio_card);		// N3SB Hack
+			#endif
+
+			// Set a level for receiver volume - left channel
 			sound_mixer(audio_card, "Master", rx_vol);			// Need to change - N3SB
-//			sound_mixer("hw:0", "Master", rx_vol);
+			// sound_mixer("hw:0", "Master", rx_vol);
 		}
 	}
 	else if(!strcmp(cmd, "r1:high")){
@@ -1617,7 +1728,12 @@ void sdr_request(char *request, char *response){
 	else if (!strcmp(cmd, "txcal"))
 		tx_cal();
 	else if (!strcmp(cmd, "tx_compress"))
-		tx_compress = atoi(value); 
-  /* else
-		printf("*Error request[%s] not accepted\n", request); */
+		tx_compress = atoi(value);
+	#if 0 
+  else
+		#ifdef LOG
+			// printf("*Error request[%s] not accepted\n", request);
+			log_debug("*Error request[%s] not accepted", request);
+		#endif
+	#endif
 }

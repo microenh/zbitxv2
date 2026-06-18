@@ -1,7 +1,7 @@
 TARGET = sbitx
 
 CC      = gcc
-CFLAGS  = -g $(shell pkg-config --cflags gtk+-3.0)
+CFLAGS  = -g $(shell pkg-config --cflags gtk+-3.0) -MMD -MP
 
 LDFLAGS =    \
 	-lasound   \
@@ -39,7 +39,10 @@ SRCS =          \
 	vfo.c         \
 	webserver.c
 
-OBJS    = $(SRCS:.c=.o) 
+OBJS = $(SRCS:.c=.o) 
+
+DEPS = $(SRCS:.c=.d)
+
 FT8_LIB = ft8_lib/libft8.a
 
 .PHONY: all clean
@@ -60,5 +63,7 @@ audio data web:
 data/sbitx.db: | data
 	cd data && sqlite3 sbitx.db < create_db.sql
 
+-include $(DEPS)
+
 clean:
-	rm -f $(OBJS) $(TARGET)
+	rm -f $(OBJS) $(TARGET) $(DEPS)
