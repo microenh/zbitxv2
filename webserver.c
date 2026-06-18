@@ -240,10 +240,12 @@ static void web_fn(struct mg_connection *c, int ev, void *ev_data, void *fn_data
   } else if (ev == MG_EV_HTTP_MSG) {
     struct mg_http_message *hm = (struct mg_http_message *) ev_data;
 
+		#if 0
 		if (mg_http_match_uri(hm, "/error")) {
 			mg_error(c, "sim error");
 			return;
 		}
+		#endif
 
     if (mg_http_match_uri(hm, "/websocket")) {
       // Upgrade to websocket. From now on, a connection is a full-duplex
