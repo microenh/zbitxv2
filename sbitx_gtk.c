@@ -968,6 +968,10 @@ int remote_update_field(int i, char *text){
 //	if (!strcmp(f->cmd, "#text_in") && strlen(f->value))
 //		printf("#text_in [%s] %d\n", f->value, update);
 	//debug off
+
+	#ifdef LOG
+		log_debug("remote: [%s]", text);
+	#endif
 	return update;
 }
 
@@ -1150,7 +1154,7 @@ void write_console(int style, char *raw_text){
 	#ifdef LOG
 		log_debug("after sprintf 2");
 	#endif
-	//remote_write(remote_text);
+	remote_write(remote_text);
 	//move to a new line if the style has changed
 	if (style != console_style){
 		q_write(&q_web, '{');
