@@ -1,6 +1,7 @@
 *.o
 data/*.db
 *.swp
+*.d
 data/results_row.txt
 web/grids.txt
 sbitx
