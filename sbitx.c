@@ -24,7 +24,6 @@
 #include "log.h"
 int set_field(char *, char *);  // This should be moved to a .h file
 
-#define LOG
 #define DEBUG 0
 
 char audio_card[32];

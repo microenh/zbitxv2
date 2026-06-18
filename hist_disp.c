@@ -9,8 +9,6 @@
 #include "logbook.h"
 #include "hist_disp.h"
 
-#define LOG
-
 bool isLetter(char c) {
     return c >= 'A' && c <= 'Z';
 }

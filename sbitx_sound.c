@@ -10,8 +10,6 @@
 #include "sdr.h"
 #include "log.h"
 
-// #define LOG
-
 // Set the DEBUG define to 1 to compile in the debugging messages.
 // Set the DEBUG define to 2 to compile in detailed error reporting debugging messages.
 #define DEBUG 0
@@ -270,10 +268,12 @@ int sound_start_play(char *device){
 
 	// the buffer size is each periodsize x n_periods
 	//	snd_pcm_uframes_t  n_frames= (buff_size  * n_periods_per_buffer)/8;
-	snd_pcm_uframes_t  n_frames= (buff_size  * n_periods_per_buffer)/8*4;		// A Larger buffer - N3SB Hack
-#if DEBUG > 0	
-	printf("trying for buffer size of %ld\n", n_frames);
-#endif
+	// A Larger buffer - N3SB Hack
+	snd_pcm_uframes_t  n_frames= (buff_size  * n_periods_per_buffer)/8*4;
+	#if DEBUG > 0	&& defined(LOG)
+		// printf("trying for buffer size of %ld\n", n_frames);
+		log_info("trying for buffer size of %ld", n_frames);
+	#endif
 /*
 // This function call and the previous have been replaced by the snd_pcm_hw_params_set_period_size_near() function call - N3SB December 2023
 	e = snd_pcm_hw_params_set_buffer_size_near(pcm_play_handle, hwparams, &n_frames);
@@ -368,7 +368,7 @@ int sound_start_loopback_capture(char *device){
 		return(-1);
 	}
 
-/*
+#if 0
 	//printf("%d: set the #channels\n", __LINE__, 2);
 	// Set number of periods. Periods used to be called fragments.
 	if ((e = snd_pcm_hw_params_set_periods(loopback_capture_handle, hloop_params, n_periods_per_buffer, 0)) < 0) {
@@ -378,13 +378,17 @@ int sound_start_loopback_capture(char *device){
 
 	// the buffer size is each periodsize x n_periods
 	snd_pcm_uframes_t  n_frames= (buff_size  * n_periods_per_buffer) / 8;
-	// printf("trying for buffer size of %ld\n", n_frames);
+	#ifdef LOG
+		// printf("trying for buffer size of %ld\n", n_frames);
+		log_debug("trying for buffer size of %ld", n_frames);
+	#endif
 	e = snd_pcm_hw_params_set_buffer_size_near(loopback_capture_handle, hloop_params, &n_frames);
 	if (e < 0) {
 		    fprintf(stderr, "*Error setting loopback capture buffersize.\n");
 		    return(-1);
 	}
-*/
+#endif
+
 	// This function call and the previous have been replaced by the snd_pcm_hw_params_set_period_size_near() function call - N3SB December 2023
 	snd_pcm_uframes_t  n_frames= (buff_size  * n_periods_per_buffer) / 8;
 	e = snd_pcm_hw_params_set_period_size_near(loopback_capture_handle, hloop_params, &n_frames, 0);
@@ -483,7 +487,7 @@ int sound_start_capture(char *device){
 		return(-1);
 	}
 
-/*
+#if 0
 	// Set number of periods. Periods used to be called fragments.
 	if ((e = snd_pcm_hw_params_set_periods(pcm_capture_handle, hwparams, n_periods_per_buffer, 0)) < 0) {
 		fprintf(stderr, "*Error setting capture periods.\n");
@@ -492,13 +496,17 @@ int sound_start_capture(char *device){
 
 	// the buffer size is each periodsize x n_periods
 	snd_pcm_uframes_t  n_frames= (buff_size  * n_periods_per_buffer)/ 8;
-	//printf("trying for buffer size of %ld\n", n_frames);
+	#ifdef LOG
+		// printf("trying for buffer size of %ld\n", n_frames);
+		log_info("trying for buffer size of %ld\n", n_frames);
+	#endif
 	e = snd_pcm_hw_params_set_buffer_size_near(pcm_capture_handle, hwparams, &n_frames);
 	if (e < 0) {
 		    fprintf(stderr, "*Error setting PCM capture buffersize.\n");
 		    return(-1);
 	}
-*/
+#endif
+
 	snd_pcm_uframes_t  n_frames= (buff_size  * n_periods_per_buffer)/ 8;
 	// This function call replaces the two function calls above - N3SB December 2023
 	e = snd_pcm_hw_params_set_period_size_near(pcm_capture_handle, hwparams, &n_frames, 0);
@@ -1015,7 +1023,7 @@ void snd_error_handler(const char *file, int line, const char *function, int err
 	#ifdef DEBUG
 		//char debug_buffer[15];
 		//vsnprintf(debug_buffer, sizeof(debug_buffer), fmt, args);
-		log_debug(do_fmt(fmt, args));
+		log_warn(do_fmt(fmt, args));
 	#endif
 }
 
@@ -1042,10 +1050,16 @@ void *sound_thread_function(void *ptr){
 			break;
 		fprintf(stderr, "*Error opening PCM Capture device");
 		delay(1000); //wait for the sound system to bootup
-		printf("Retrying the sound system %d\n", i);
+		#ifdef LOG
+			// printf("Retrying the sound system %d\n", i);
+			log_info("Retrying the sound system %d", i);
+		#endif
 	}
 	if (i == 10){
-	  fprintf(stderr, "*Error opening PCM Capture device - Aborting");
+		#ifdef LOG
+	  	// fprintf(stderr, "*Error opening PCM Capture device - Aborting");
+	  	log_fatal("*Error opening PCM Capture device - Aborting");
+		#endif
 		return NULL;
 	}
 
@@ -1053,12 +1067,21 @@ void *sound_thread_function(void *ptr){
 	for (i = 0; i < 10; i++){
 		if (sound_start_play(device) == 0)
 			break;
-		fprintf(stderr, "*Error opening PCM Play device");
+		#ifdef LOG
+			// fprintf(stderr, "*Error opening PCM Play device");
+			log_error("*Error opening PCM Play device");
+		#endif
 		delay(1000); //wait for the sound system to bootup
-		printf("Retrying the sound system %d\n", i);
+		#ifdef LOG
+			// printf("Retrying the sound system %d\n", i);
+			log_info("Retrying the sound system %d", i);
+		#endif
 	}
 	if (i == 10){
-	 fprintf(stderr, "*Error opening PCM Play device - Aborting");
+		#ifdef LOG
+			// fprintf(stderr, "*Error opening PCM Play device - Aborting");
+			log_fatal("*Error opening PCM Play device - Aborting");
+		#endif
 		return NULL;
 	}
 
@@ -1068,12 +1091,21 @@ void *sound_thread_function(void *ptr){
 	for (i = 0; i < 10; i++){
 		if(sound_start_loopback_play("plughw:1,0") == 0)
 			break;
-		fprintf(stderr, "*Error opening Loopback Play device");
+		#ifdef LOG
+		  // fprintf(stderr, "*Error opening Loopback Play device");
+		  log_error("*Error opening Loopback Play device");
+		#endif
 		delay(1000);
-		printf("Retrying the sound system %d\n", i);
+		#ifdef LOG
+			// printf("Retrying the sound system %d\n", i);
+			log_info("Retrying the sound system %d", i);
+		#endif
 	}
 	if (i == 10){
-	 fprintf(stderr, "*Error opening Loopback Play device - Aborting");
+		#ifdef LOG
+			// fprintf(stderr, "*Error opening Loopback Play device - Aborting");
+			log_fatal("*Error opening Loopback Play device - Aborting");
+		#endif
 		return NULL;
 	}
 
@@ -1090,23 +1122,35 @@ void *loopback_thread_function(void *ptr){
 	//switch to maximum priority
 	sch.sched_priority = sched_get_priority_max(SCHED_FIFO);
 	pthread_setschedparam(loopback_thread, SCHED_FIFO, &sch);
-//	printf("loopback thread is %x\n", loopback_thread);
-//  printf("opening loopback on plughw:1,0 sound card\n");	
+	#ifdef LOG
+		// printf("loopback thread is %x\n", loopback_thread);
+		log_debug("loopback thread is %x", loopback_thread);
+		// printf("opening loopback on plughw:1,0 sound card\n");
+		log_debug("opening loopback on plughw:1,0 sound card");
+	#endif
 
 	int i = 0;
 	for (i = 0; i < 10; i++){
 		if (sound_start_loopback_capture("plughw:2,1") == 0)
 			break;
-		fprintf(stderr, "*Error opening Loopback Capture device");
+		#ifdef LOG
+			// fprintf(stderr, "*Error opening Loopback Capture device");
+			log_error("*Error opening Loopback Capture device");
+		#endif
 		delay(1000);
-		printf("Retrying the sound system %d\n", i);
+		#ifdef LOG
+			// printf("Retrying the sound system %d\n", i);
+			log_info("Retrying the sound system %d", i);
+		#endif
 	}
 	if (i == 10){
-	 fprintf(stderr, "*Error opening Loopback Capture device - Aborting");
+		#ifdef LOg
+			// fprintf(stderr, "*Error opening Loopback Capture device - Aborting");
+			log_fatal("*Error opening Loopback Capture device - Aborting");
+		#endif
 		return NULL;
 	}
 		
-	
 	sound_thread_continue = 1;
 	loopback_loop();
 	sound_stop();
@@ -1136,7 +1180,7 @@ void sound_input(int loop){
 }
 
 //demo, uncomment it to test it out
-/*
+#if 0
 void sound_process(int32_t *input_i, int32_t *input_q, int32_t *output_i, int32_t *output_q, int n_samples){
  
 	for (int i= 0; i < n_samples; i++){
@@ -1151,4 +1195,4 @@ void main(int argc, char **argv){
 	sound_thread_stop();
 	sleep(10);
 }
-*/
+#endif

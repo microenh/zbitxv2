@@ -11,6 +11,7 @@
 #include "sdr_ui.h"
 #include "logbook.h"
 #include "hist_disp.h"
+#include "log.h"
 
 static const char *s_listen_on = "ws://0.0.0.0:8080";
 static char s_web_root[1000];
@@ -26,7 +27,10 @@ static void get_console(struct mg_connection *c){
 	int n = web_get_console(buff, 2000);
 	if (!n)
 		return;
-	//char first20 [21]; strncpy(first20, buff, 20); first20[20] = 0;  tlog("get_console", first20, n);
+	// char first20[21];
+	// strncpy(first20, buff, 20);
+	// first20[20] = 0;
+	// tlog("get_console", first20, n);
 	mg_ws_send(c, buff, strlen(buff), WEBSOCKET_OP_TEXT);
 }
 
@@ -42,7 +46,7 @@ static void get_updates(struct mg_connection *c, int all){
 		// return of -1 indicates the eof fields
 		if (update == -1)
 			return;
-	//send the status anyway
+		// send the status anyway
 		if (all || update )
 			mg_ws_send(c, buff, strlen(buff), WEBSOCKET_OP_TEXT); 
 		i++;
@@ -58,7 +62,10 @@ static void do_login(struct mg_connection *c, char *key){
 	if ((!key || strcmp(passkey, key)) && (c->rem.ip != 16777343)){
 		web_respond(c, "login error");
 		c->is_draining = 1;
-		printf("passkey didn't match. Closing socket\n");
+		#ifdef LOG
+			// printf("passkey didn't match. Closing socket\n");
+			log_info("passkey didn't match. Closing socket");
+		#endif
 		return;
 	}
 
@@ -131,6 +138,7 @@ static void web_despatcher(struct mg_connection *c, struct mg_ws_message *wm){
 	if (wm->data.len > 99)
 		return;
 
+
 	strncpy(request, wm->data.ptr, wm->data.len);	
 	request[wm->data.len] = 0;
 	//handle the 'no-cookie' situation
@@ -143,22 +151,37 @@ static void web_despatcher(struct mg_connection *c, struct mg_ws_message *wm){
 	value = strtok(NULL, "\n");
 
 	if (field == NULL || cookie == NULL){
-		printf("Invalid request on websocket\n");
+		#ifdef LOG
+			// printf("Invalid request on websocket\n");
+			log_info("Invalid request on websocket");
+		#endif
 		web_respond(c, "quit Invalid request on websocket");
 		c->is_draining = 1;
 	}
-	else if (strlen(field) > 100 || strlen(field) <  2 || strlen(cookie) > 40 || strlen(cookie) < 4){
-		printf("Ill formed request on websocket\n");
+	else if (strlen(field) > 100 
+		|| strlen(field) <  2
+		|| strlen(cookie) > 40
+		|| strlen(cookie) < 4){
+		#ifdef LOG
+			// printf("Ill formed request on websocket\n");
+			log_info("Ill formed request on websocket");
+		#endif
 		web_respond(c, "quit Illformed request");
 		c->is_draining = 1;
 	}
 	else if (!strcmp(field, "login")){
-		printf("trying login with passkey : [%s]\n", value);
+		#ifdef LOG
+			// printf("trying login with passkey: [%s]\n", value);
+			log_info("trying login with passkey: [%s]", value);
+		#endif
 		do_login(c, value);
 	}
 	else if (cookie == NULL || strcmp(cookie, session_cookie)){
 		web_respond(c, "quit expired");
-		printf("Cookie not found, closing socket %s vs %s\n", cookie, session_cookie);
+		#ifdef LOG
+			// printf("Cookie not found, closing socket %s vs %s\n", cookie, session_cookie);
+			log_info("Cookie not found, closing socket %s vs %s", cookie, session_cookie);
+		#endif
 		c->is_draining = 1;
 	}
 	else if (!strcmp(field, "spectrum"))
@@ -177,7 +200,20 @@ static void web_despatcher(struct mg_connection *c, struct mg_ws_message *wm){
 			sprintf(buff, "%s %s", field, value);
 		else
 			strcpy(buff, field);
-		printf("remote[%s]\n", buff); 
+		#if 0
+			#ifdef LOG
+				log_info("connection: [%s]", c->data);
+				log_info("message: [%s]", wm->data.ptr);
+			#endif
+		#endif
+
+		#ifdef LOG
+			// printf("remote[%s]\n", buff);
+			int il = strlen(buff) - 1;
+			if (buff[il] == '\n')
+				buff[il] = 0;
+			log_debug("remote[%s]", buff);
+		#endif
 		remote_execute(buff);
 		get_updates(c, 0);
 	}
@@ -191,10 +227,16 @@ static void web_fn(struct mg_connection *c, int ev, void *ev_data, void *fn_data
   if (ev == MG_EV_OPEN) {
     // c->is_hexdumping = 1;
 	} else if (ev == MG_EV_ERROR || ev == MG_EV_CLOSE){
-//		if (ev == MG_EV_ERROR)
-//			printf("closing with MG_EV_ERROR : ");
-//		if (ev = MG_EV_CLOSE)
-//			printf("closing with MG_EV_CLOSE : ");
+#if 0 && defined(LOG)
+			if (ev == MG_EV_ERROR){
+				// printf("closing with MG_EV_ERROR : ");
+				log_info("closing with MG_EV_ERROR : ");
+			}
+			if (ev = MG_EV_CLOSE){
+				// printf("closing with MG_EV_CLOSE : ");
+				log_info("closing with MG_EV_CLOSE : ");
+			}
+#endif
   } else if (ev == MG_EV_HTTP_MSG) {
     struct mg_http_message *hm = (struct mg_http_message *) ev_data;
     if (mg_http_match_uri(hm, "/websocket")) {
@@ -220,8 +262,11 @@ static void web_fn(struct mg_connection *c, int ev, void *ev_data, void *fn_data
 void *webserver_thread_function(void *server){
   mg_mgr_init(&mgr);  // Initialise event manager
   mg_http_listen(&mgr, s_listen_on, web_fn, NULL);  // Create HTTP listener
-  for (;;) mg_mgr_poll(&mgr, 1000);             // Infinite event loop
-	printf("exiting webserver thread\n");
+  for (;;) mg_mgr_poll(&mgr, 1000);             		// Infinite event loop
+	#ifdef LOG
+		// printf("exiting webserver thread\n");
+		log_info("exiting webserver thread");
+	#endif
 }
 
 void webserver_stop(){

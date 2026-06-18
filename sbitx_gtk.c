@@ -49,8 +49,6 @@ The initial sync between the gui values, the core radio values, settings, et al 
 #include "hist_disp.h"
 // #include "ntputil.h"
 
-#define LOG
-
 #define FT8_START_QSO 1
 #define FT8_CONTINUE_QSO 0
 void ft8_process(char *received, int operation);
@@ -3066,16 +3064,25 @@ int do_bandwidth(struct field *f, cairo_t *gfx, int event, int a, int b, int c){
 static char tune_tx_saved_mode[100]={0};
 int do_tune_tx(struct field *f, cairo_t *gfx, int event, int a, int b, int c){
 	if(event == FIELD_EDIT){
-		printf("tune_tx : %s\n", f->value);
+		#ifdef LOG
+			// printf("tune_tx : %s\n", f->value);
+			log_info("tune_tx : %s", f->value);
+		#endif
 		if (!strcmp(f->value, "ON")){
-			puts("Turning on TUNE");	
+			#ifdef LOG
+				// puts("Turning on TUNE");
+				log_info("Turning on TUNE");
+			#endif
 			strcpy(tune_tx_saved_mode, get_field("r1:mode")->value);
 			field_set("MODE", "TUNE");	
 			update_field(get_field("r1:mode"));
 			tx_on(TX_SOFT);
 		}
 		else{
-			puts("Turning off TUNE");
+			#ifdef LOG
+				// puts("Turning off TUNE");
+				log_info("Turning off TUNE");
+			#endif
 			tx_off();
 			field_set("MODE", tune_tx_saved_mode);	
 			update_field(get_field("r1:mode"));
@@ -4739,7 +4746,10 @@ void do_control_action(char *cmd){
 		change_band(request); 		
 	}
 	else if(!strcmp(request, "TUNE ON")){
-		puts("Turning on TUNE");	
+		#ifdef LOG
+			//puts("Turning on TUNE");
+			log_info("Turning on TUNE");
+		#endif	
 		strcpy(tune_tx_saved_mode, get_field("r1:mode")->value);
 		//field_set("MODE", "TUNE");	
 		//update_field(get_field("r1:mode"));
@@ -4750,7 +4760,10 @@ void do_control_action(char *cmd){
 		tx_on(TX_SOFT);
 	}
 	else if(!strcmp(request, "TUNE OFF")){
-		puts("Turning off TUNE");
+		#ifdef LOG
+			// puts("Turning off TUNE");
+			log_info("Turning off TUNE");
+		#endif
 		tx_off();
 		if (tune_tx_saved_mode[0]){
 			field_set("MODE", tune_tx_saved_mode);	
@@ -4894,7 +4907,7 @@ void pre_ft8_check(char* message) {
 
 		#ifdef LOG
 			// printf("pre_ft8_check: '%s'\n", result);
-			log_info("pre_ft8_check: [%s]", result);
+			log_debug("pre_ft8_check: [%s]", result);
 		#endif
 
 		if (strlen(result) > 127 ) {
@@ -5101,7 +5114,10 @@ void cmd_exec(char *cmd){
 	
 	else if (exec[0] == 'F' && isdigit(exec[1])){
 		char buff[1000];
-		printf("executing macro %s\n", exec);
+		#ifdef LOG
+			// printf("executing macro %s\n", exec);
+			log_info("executing macro %s", exec);
+		#endif
 		do_macro(get_field_by_label(exec), NULL, GDK_BUTTON_PRESS, 0, 0, 0);
 		//macro_exec(atoi(exec+1), buff);
 		//if (strlen(buff))

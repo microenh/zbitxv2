@@ -25,8 +25,6 @@
 #include "ft8_lib/fft/kiss_fftr.h"
 #include "log.h"
 
-#define LOG
-
 static int32_t ft8_rx_buff[FT8_MAX_BUFF];
 static float ft8_rx_buffer[FT8_MAX_BUFF];
 static float ft8_tx_buff[FT8_MAX_BUFF];
@@ -713,7 +711,7 @@ void ft8_rx(int32_t *samples, int count){
 		ft8_rx_buff_index = 0;
 		#ifdef LOG
 			// printf("Buffer Overflow\n");
-			log_info("Buffer Overflow");
+			log_warn("Buffer Overflow");
 		#endif
 	}
 
@@ -974,7 +972,7 @@ void ft8_process(char *message, int operation){
 
 	#ifdef LOG
 		// printf("ft8_process:%d[%s]\n", operation, message);
-		log_info("ft8_process:%d[%s]", operation, message);
+		log_info("ft8_process: %d [%s]", operation, message);
 	#endif
 
 	if (ft8_message_tokenize(message) == -1)

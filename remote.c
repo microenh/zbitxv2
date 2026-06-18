@@ -22,6 +22,7 @@
 #include "sdr.h"
 #include "sdr_ui.h"
 #include "logbook.h"
+#include "log.h"
 
 static int welcome_socket = -1, data_socket = -1;
 #define MAX_DATA 1000
@@ -84,7 +85,11 @@ static void get_logs(struct remote *r){
 	char query[100];
 	int	row_id;
 
-	printf("remote: sending logs\n");
+	#ifdef LOG
+		// printf("remote: sending logs\n");
+		log_info("remote: sending logs");
+	#endif
+
 	query[0] = 0;
 	row_id = 0;
 	logbook_query(NULL, row_id, logbook_path);
@@ -128,21 +133,31 @@ void *fn_remote_client(void *fd_client){
 	setsockopt(data_socket, IPPROTO_TCP, TCP_NODELAY, &one, sizeof(one)); 
 	struct remote *r = remote_new(data_socket);
 	if (!r){
-		printf("remote: max clients reached\n");
+		#ifdef LOG
+			// printf("remote: max clients reached\n");
+			log_info("remote: max clients reached");
+		#endif
 		return NULL;
 	}
 	nthreads++;
 	r->fd = data_socket;
 	r->updated_on = 0;
-	printf("remote: new thread with sock %d\n", data_socket);
-	printf("remote: insidie  a new thread for socketc %d\n", data_socket);
-  
+
+	#ifdef LOG
+	// printf("remote: new thread with sock %d\n", data_socket);
+	// printf("remote: inside a new thread for socket %d\n", data_socket);
+		log_info("remote: inside a new thread for socket %d", data_socket);
+  #endif
+
 	//this section was changed by W9JES
   tv.tv_sec = 2; //gone in 2 seconds
   tv.tv_usec = 0;
 	//setsockopt(data_socket, SOL_SOCKET, SO_RCVTIMEO, (const char*)&tv, sizeof tv);
 
-	printf("remote: started new client, connection count is %d\n", nthreads);
+	#ifdef LOG
+		// printf("remote: started new client, connection count is %d\n", nthreads);
+		log_info("remote: started new client, connection count is %d", nthreads);
+	#endif
 	while(1){
 
 		now = millis();
@@ -165,26 +180,40 @@ void *fn_remote_client(void *fd_client){
 				else if (!strcmp(buffer, "OPEN "))
 					get_logs(r);
 				else if(strlen(t)){
-					//printf("Received on remote : [%s]\n", t);
+					#ifdef LOG
+						//printf("Received on remote : [%s]\n", t);
+						log_debug("Received on remote : [%s]", t);
+					#endif
+
 					remote_execute(t);
 				}
 				last_request = now;
 				t = strtok_r(NULL, "\r\n", &context);
 			}
 		}
-		else if (len == 0){
-			printf("remote: eof on %d\n", data_socket);
+		else if (!len){
+			#ifdef LOG
+				// printf("remote: eof on %d\n", data_socket);
+				log_info("remote: eof on %d\n", data_socket);
+			#endif
 			break;
 		}
 		else if (update_logs){
 				get_logs(r);
 				update_logs = 0;
    	} else if (last_request + 5000 < now){
-			printf("remote: timeout\n");
+			#ifdef LOG
+				// printf("remote: timeout\n");
+				log_info("remote: timeout");
+			#endif
 			break;
 		}
 	}
-  puts("remote:  client closed the connection.\n");
+	#ifdef LOG
+  	// puts("remote:  client closed the connection.\n");
+  	log_info("remote:  client closed the connection.");
+	#endif
+
   close(r->fd);
 	//release the remote structure
   r->fd = 0;
@@ -211,36 +240,57 @@ void *fn_remote_listener(void *nothing){
 
   /* Bind the address struct to the socket */
   if(bind(server_socket, (struct sockaddr *) &server_addr, sizeof(server_addr)) != 0){
-		printf("remote: server couldn't start on port 8081\n");
+		#ifdef LOG
+			// printf("remote: server couldn't start on port 8081\n");
+			log_warn("remote: server couldn't start on port 8081");
+		#endif
 		return NULL;
 	}
 
   /* Listen on the socket, with 5 max connection requests queued */
   if(listen(server_socket,5) != 0){
-    printf("remote: tcp listen() Error\n");
+		#ifdef LOG
+    	// printf("remote: tcp listen() Error\n");
+    	log_warn("remote: tcp listen() Error");
+		#endif
 		return NULL;
 	}
-	printf("remote: listening to connections on port 8081\n");
+	#ifdef LOG
+		// printf("remote: listening to connections on port 8081\n");
+		log_info("remote: listening to connections on port 8081");
+	#endif
 
 	while(1){
 		int fd = -1;
 		pthread_t new_client;
 		addr_size = sizeof(client_addr);
 		if ((fd = accept(server_socket, (struct sockaddr *)&client_addr, &addr_size)) < 0){
-			printf("remote: client connection failed\n");
+			#ifdef LOG
+				// printf("remote: client connection failed\n");
+				log_warn("remote: client connection failed");
+			#endif
 			continue;
 		}
 		else if (nthreads < MAX_THREADS-1){
-			printf("remote: spawing a new thread for socketc %d\n", fd);
+			#ifdef LOG
+				// printf("remote: spawing a new thread for socket %d\n", fd);
+				log_info("remote: spawing a new thread for socket %d", fd);
+			#endif
 			pthread_create(&new_client, NULL, fn_remote_client, (void*)(intptr_t)fd);
 		}
 		else{
-			printf("remote: dropped connection as too many clients are connected\n");
+			#ifdef LOG
+				// printf("remote: dropped connection as too many clients are connected\n");
+				log_warn("remote: dropped connection as too many clients are connected");
+			#endif
 			close(fd);
 		}
 
 	}
-	printf("remote: never reaches here\n");
+	#ifdef LOG
+	  // printf("remote: never reaches here\n");
+	  log_warn("remote: never reaches here");
+	#endif
 	return NULL;
 }
 
