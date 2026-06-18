@@ -5,8 +5,11 @@
 #include <stdbool.h>
 #include <math.h>
 #include "sdr_ui.h"
+#include "log.h"
 #include "logbook.h"
 #include "hist_disp.h"
+
+#define LOG
 
 bool isLetter(char c) {
     return c >= 'A' && c <= 'Z';
@@ -47,16 +50,19 @@ struct hd_message_struct {
 	char m1[32], m2[32], m3[32], m4[32];
 };
 
-int hd_next_token(char* src, int start, char* tok, int tok_max, char * sep) {
+#if 0
+int hd_next_token(char *src, int start, char *tok, int tok_max, char *sep) {
 	tok[0] = 0;
 	if (src == NULL || src[start] == 0) 
 		return -1;
-	char * p_sep;
+	char *p_sep;
 	int n, p;
 	int len = strlen(src);
+
 	if (len > 0 && src[len-1] == '\n') {
 		len--; // strip trailing newline
 	}
+
 	do {
 		p_sep = strstr(src + start, sep);
 		if (p_sep == NULL) {
@@ -66,15 +72,18 @@ int hd_next_token(char* src, int start, char* tok, int tok_max, char * sep) {
 		p = start;
 		start = start + n + strlen(sep);
 	} while (n == 0 && start < len);
+
 	if (n > tok_max) return -2;
 	memcpy(tok, src + p, n);
 	tok[n] = 0;
+
 	return p + n + strlen(sep);
 }
 
 int hd_message_parse(struct hd_message_struct* p_message, char* raw_message) {
+
 	int r = hd_next_token(raw_message, 0, p_message->signal_info, 32, "~ ");
-	if (r < 0 ) return r;
+	if (r < 0) return r;
 	r = hd_next_token(raw_message, r, p_message->m1, 32, " ");
 	if (r < 0) return r;
 	r = hd_next_token(raw_message, r, p_message->m2, 32, " ");
@@ -85,6 +94,52 @@ int hd_message_parse(struct hd_message_struct* p_message, char* raw_message) {
 	if (r < -1) return r;
 	return 0;
 }
+
+#else
+
+#define MIN(a,b) ((a) < (b) ? (a) : (b))
+
+int hd_message_parse(struct hd_message_struct *p_message, char *raw_message){
+	p_message->signal_info[0] = 0;
+	p_message->m1[0] = 0;
+	p_message->m2[0] = 0;
+	p_message->m3[0] = 0;
+	p_message->m4[0] = 0;
+
+	char *tilde = strchr(raw_message, '~');
+	if (tilde) {
+		char *work = tilde;
+		//do {
+		//	work--;
+		//} while (*work != ' ');
+		int len = MIN(work  + 1 - raw_message, sizeof(p_message->signal_info));
+		snprintf(p_message->signal_info, len, raw_message);
+		work = tilde + 1;
+		//do {
+		//	work++;
+		//} while (*work == ' ');
+		char work1[80];
+		snprintf(work1, sizeof(work1), work);
+		char *s = strtok(work1, " \n");
+		if (s){
+			snprintf(p_message->m1, sizeof(p_message->m1), s);
+			s = strtok(NULL, " \n");
+			if (s){
+				snprintf(p_message->m2, sizeof(p_message->m2), s);
+				s = strtok(NULL, " \n");
+				if (s){
+					snprintf(p_message->m3, sizeof(p_message->m3), s);
+					s = strtok(NULL, " \n");
+					if (p_message){
+						snprintf(p_message->m4, sizeof(p_message->m4), s);
+					}
+				}
+			}
+		}
+	}
+	return 0;
+}
+#endif
 
 int ff_lookup_style(char* id, int style, int style_default) {
 	switch (style)
@@ -116,7 +171,13 @@ char *ff_cs(char * markup, int style) {
 	return markup;
 }
 
-char* ff_style(char* decorated, struct hd_message_struct *pms, int style_default, int style1, int style2, int style3, int style4) {
+char *ff_style(char* decorated, struct hd_message_struct *pms,
+		int style_default, int style1, int style2, int style3, int style4) {
+
+	#ifdef LOG
+		log_debug("start ff_style");
+	#endif
+
 	char markup[3];
 	*decorated = 0;
 	
@@ -140,8 +201,12 @@ char* ff_style(char* decorated, struct hd_message_struct *pms, int style_default
 		strcat(decorated, ff_cs(markup, ff_lookup_style(pms->m4, style4, style_default)));
 		strcat(decorated, pms->m4);
 	}
+
 	strcat(decorated, "\n");
 
+	#ifdef LOG
+		log_debug("end ff_style");
+	#endif
 }
 
 int hd_length_no_decoration( char * decorated) {
@@ -166,42 +231,90 @@ void hd_strip_decoration(char * ft8_message, char * decorated) {
 	*ft8_message = 0;
 }
 
-int hd_decorate(int style, char * message, char * decorated) {
-	
+int hd_decorate(int style, char *message, char *decorated) {
+	#ifdef LOG
+		log_debug("begin hd_decorate");
+	#endif
 	switch (style) {
 	case FONT_FT8_RX:
 	case FONT_FT8_TX:
 	case FONT_FT8_QUEUED:
 	case FONT_FT8_REPLY: 
 		{
-		decorated[0] = 0;
+		  decorated[0] = 0;
 			struct hd_message_struct fms;
-			const char* my_callsign = field_str("MYCALLSIGN");
+			const char *my_callsign = field_str("MYCALLSIGN");
 			int res = hd_message_parse(&fms, message);
+			#ifdef LOG
+				log_debug("res: %d, sig: %s, m1: %s, m2: %s, m3: %s, m4: %s",
+					res, fms.signal_info,  fms.m1, fms.m2, fms.m3, fms.m4);
+			#endif
 			if (res == 0) {
 				if (!strcmp(fms.m1, "CQ")) { 
 					if (fms.m4[0] == 0) { // CQ caller grid
+						#ifdef LOG
+							log_debug("before ff_style 1");
+						#endif
 						ff_style(decorated, &fms, style, FONT_LOG, FF_CALLER, FF_GRID, 0);
+						#ifdef LOG
+							log_debug("after ff_style 1");
+						#endif
 					}
 					else { // CQ DX caller grid
+						#ifdef LOG
+							log_debug("before ff_style 2");
+						#endif
 						ff_style(decorated, &fms, style, FONT_LOG, FONT_LOG, FF_CALLER, FF_GRID);
+						#ifdef LOG
+							log_debug("after ff_style 2");
+						#endif
 					}
 				} else if (!strcmp(fms.m1, my_callsign)) 
 				{ // mycall caller grid|report
+					#ifdef LOG
+						log_debug("before ff_style 3");
+					#endif
 					ff_style(decorated, &fms, style, FF_MYCALL, FF_CALLER, FF_GRID, 0);
+					#ifdef LOG
+						log_debug("after ff_style 3");
+					#endif
 				} else if (!strcmp(fms.m2, my_callsign)) 
 				{ // caller mycall grid|report
+					#ifdef LOG
+						log_debug("before ff_style 4");
+					#endif
 					ff_style(decorated, &fms, style, FF_CALLER, FF_MYCALL, FF_GRID, 0);
+					#ifdef LOG
+						log_debug("after ff_style 4");
+					#endif
 				} else 
 				{ // other caller grid|report
+					#ifdef LOG
+						log_debug("before ff_style 5");
+					#endif
 					ff_style(decorated, &fms, style, style, FF_CALLER, FF_GRID, 0);
+					#ifdef LOG
+						log_debug("after ff_style 5");
+					#endif
 				}
 			}
+			#ifdef LOG
+				log_debug("return hd_decorate %d", res);
+			#endif
 			return res;
 		}
 		break;
 	default:
+		#ifdef LOG
+			log_debug("default");
+		#endif
 		strcpy(decorated, message);
+		#ifdef LOG
+			log_debug("after strcpy");
+		#endif
 	}
+	#ifdef LOG
+		log_debug("return hd_decorate 0");
+	#endif
 	return 0;
 }

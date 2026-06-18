@@ -10,7 +10,7 @@
 #include "sdr.h"
 #include "log.h"
 
-#define LOG
+// #define LOG
 
 // Set the DEBUG define to 1 to compile in the debugging messages.
 // Set the DEBUG define to 2 to compile in detailed error reporting debugging messages.
@@ -1015,7 +1015,7 @@ void snd_error_handler(const char *file, int line, const char *function, int err
 	#ifdef DEBUG
 		//char debug_buffer[15];
 		//vsnprintf(debug_buffer, sizeof(debug_buffer), fmt, args);
-		log_info(do_fmt(fmt, args));
+		log_debug(do_fmt(fmt, args));
 	#endif
 }
 

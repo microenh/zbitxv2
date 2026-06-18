@@ -1017,6 +1017,9 @@ void web_add_string(char *string){
 }
 
 void  web_write(int style, char *data){
+	#ifdef LOG
+		log_debug("style: %d, data: %s", style, data);
+	#endif
 	char tag[20];
     //int n1 = q_length(&q_web);
 	switch(style){
@@ -1117,10 +1120,10 @@ void write_console(int style, char *raw_text){
 		strcat(directory, "/sbitx/data/display_log.txt");
   #endif
 
-  // tlog("write_console", text, style);
 
 	#ifdef LOG
-		log_debug("write_console [%s], %d", raw_text, style);
+  	// tlog("write_console", text, style);
+		log_debug("write_console %d, [%s]", style, raw_text);
 	#endif
 
 	char *text;
@@ -1129,11 +1132,24 @@ void write_console(int style, char *raw_text){
 	
 	if (strlen(raw_text) == 0)
 		return;
+
 	sprintf(remote_text, "%d %s\n", style, raw_text);
+	#ifdef LOG
+		log_debug("after sprintf: [%s]", raw_text);
+	#endif
 	hd_decorate(style, raw_text, decorated);
+	#ifdef LOG
+		log_debug("after hd_decorate: [%s],[%s]", raw_text, decorated);
+	#endif
 	text = decorated;
 	web_write(style, text);
+	#ifdef LOG
+		log_debug("after web_write");
+	#endif
 	sprintf(remote_text, "%d %s\n", style, text);
+	#ifdef LOG
+		log_debug("after sprintf 2");
+	#endif
 	//remote_write(remote_text);
 	//move to a new line if the style has changed
 	if (style != console_style){
