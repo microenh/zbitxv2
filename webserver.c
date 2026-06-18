@@ -239,6 +239,12 @@ static void web_fn(struct mg_connection *c, int ev, void *ev_data, void *fn_data
 #endif
   } else if (ev == MG_EV_HTTP_MSG) {
     struct mg_http_message *hm = (struct mg_http_message *) ev_data;
+
+		if (mg_http_match_uri(hm, "/error")) {
+			mg_error(c, "sim error");
+			return;
+		}
+
     if (mg_http_match_uri(hm, "/websocket")) {
       // Upgrade to websocket. From now on, a connection is a full-duplex
       // Websocket connection, which will receive MG_EV_WS_MSG events.
@@ -259,13 +265,32 @@ static void web_fn(struct mg_connection *c, int ev, void *ev_data, void *fn_data
   (void) fn_data;
 }
 
+void custom_mg_log(char ch, void *param){
+	#ifdef LOG
+		static int ct = 0;
+		static char mg_buffer[80];
+		if (ch == 10) {
+			if (ct) {
+				log_warn(mg_buffer);
+				ct = 0;
+			}
+		} else {
+			mg_buffer[ct++] = ch;
+			mg_buffer[ct] = 0;
+		}
+	#endif
+}
+
 void *webserver_thread_function(void *server){
   mg_mgr_init(&mgr);  // Initialise event manager
+
+	mg_log_set_fn(custom_mg_log, NULL);
+
   mg_http_listen(&mgr, s_listen_on, web_fn, NULL);  // Create HTTP listener
   for (;;) mg_mgr_poll(&mgr, 1000);             		// Infinite event loop
 	#ifdef LOG
 		// printf("exiting webserver thread\n");
-		log_info("exiting webserver thread");
+		log_warn("exiting webserver thread");
 	#endif
 }
 

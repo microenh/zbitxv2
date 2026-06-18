@@ -5165,9 +5165,20 @@ void ensure_single_instance(){
 
 int main( int argc, char* argv[] ) {
 	// clear screen
-	puts("\033[2J\033[H" VER_STR "\n");
+	puts("\033[2J\033[H" VER_STR);
 
-	log_set_level(LOG_INFO);
+	int ll;
+	if ((argc > 1) && argv[1][0] > 0) {
+		ll = argv[1][0] - '0';
+		if (ll < LOG_TRACE) ll = LOG_TRACE;
+		if (ll > LOG_FATAL) ll = LOG_FATAL;
+		printf("Log level: %s", log_level_string(ll));
+	} else {
+		ll = LOG_FATAL + 1; 
+	}
+	puts("");
+
+	log_set_level(ll);
 
 	active_layout = main_controls;
 
