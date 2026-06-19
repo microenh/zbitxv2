@@ -1473,7 +1473,7 @@ void setup(char *audio_output_device){
 
 	#ifdef LOG
 		// printf("Audio Output Device is: %s\n", audio_output_device);
-		log_info("Audio Output Device is: %s", audio_output_device);
+		log_debug("Audio Output Device is: %s", audio_output_device);
 	#endif
 
 	read_hw_ini();
@@ -1516,7 +1516,7 @@ void setup(char *audio_output_device){
 	//}
 	#ifdef LOG
 		// printf("hw version: %d\n", sbitx_version);
-		log_info("hw version: %d", sbitx_version);
+		log_debug("hw version: %d", sbitx_version);
 	#endif
 
 	setup_audio_codec();

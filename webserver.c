@@ -164,7 +164,7 @@ static void web_despatcher(struct mg_connection *c, struct mg_ws_message *wm){
 		|| strlen(cookie) < 4){
 		#ifdef LOG
 			// printf("Ill formed request on websocket\n");
-			log_info("Ill formed request on websocket");
+			log_debug("Ill formed request on websocket");
 		#endif
 		web_respond(c, "quit Illformed request");
 		c->is_draining = 1;
@@ -172,7 +172,7 @@ static void web_despatcher(struct mg_connection *c, struct mg_ws_message *wm){
 	else if (!strcmp(field, "login")){
 		#ifdef LOG
 			// printf("trying login with passkey: [%s]\n", value);
-			log_info("trying login with passkey: [%s]", value);
+			log_debug("trying login with passkey: [%s]", value);
 		#endif
 		do_login(c, value);
 	}
@@ -180,7 +180,7 @@ static void web_despatcher(struct mg_connection *c, struct mg_ws_message *wm){
 		web_respond(c, "quit expired");
 		#ifdef LOG
 			// printf("Cookie not found, closing socket %s vs %s\n", cookie, session_cookie);
-			log_info("Cookie not found, closing socket %s vs %s", cookie, session_cookie);
+			log_debug("Cookie not found, closing socket %s vs %s", cookie, session_cookie);
 		#endif
 		c->is_draining = 1;
 	}

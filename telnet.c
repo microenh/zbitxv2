@@ -89,7 +89,7 @@ void init_ntp_client(char *server){
 	char buff[200], host[100], port[7];
 
 
-	sprintf(buff, "Finding NTP server %s\n", server);
+	sprintf(buff, "Finding NTP server %s", server);
 	write_console(FONT_LOG, buff);
 
   memset(serverAddr.sin_zero, '\0', sizeof serverAddr.sin_zero);  

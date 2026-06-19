@@ -1613,7 +1613,7 @@ function FT8_new_message(text, style){
 	FT8_list_append("wsjtx-activity", text, style) ;
 	var mycallsign = $("#MYCALLSIGN").val().toUpperCase();
 	if (words[4] == $("#FT8-rx-freq").val() || text.search(mycallsign) >= 0)
-		FT8_list_append("wsjtx-rx", text, style);
+	FT8_list_append("wsjtx-rx", text, style);
 }
 
 // setup the html for wsjtx 

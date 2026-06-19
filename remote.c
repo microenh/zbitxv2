@@ -146,7 +146,7 @@ void *fn_remote_client(void *fd_client){
 	#ifdef LOG
 	// printf("remote: new thread with sock %d\n", data_socket);
 	// printf("remote: inside a new thread for socket %d\n", data_socket);
-		log_info("remote: inside a new thread for socket %d", data_socket);
+		log_debug("remote: inside a new thread for socket %d", data_socket);
   #endif
 
 	//this section was changed by W9JES
@@ -156,7 +156,7 @@ void *fn_remote_client(void *fd_client){
 
 	#ifdef LOG
 		// printf("remote: started new client, connection count is %d\n", nthreads);
-		log_info("remote: started new client, connection count is %d", nthreads);
+		log_debug("remote: started new client, connection count is %d", nthreads);
 	#endif
 	while(1){
 
@@ -257,7 +257,7 @@ void *fn_remote_listener(void *nothing){
 	}
 	#ifdef LOG
 		// printf("remote: listening to connections on port 8081\n");
-		log_info("remote: listening to connections on port 8081");
+		log_debug("remote: listening to connections on port 8081");
 	#endif
 
 	while(1){
@@ -274,7 +274,7 @@ void *fn_remote_listener(void *nothing){
 		else if (nthreads < MAX_THREADS-1){
 			#ifdef LOG
 				// printf("remote: spawing a new thread for socket %d\n", fd);
-				log_info("remote: spawing a new thread for socket %d", fd);
+				log_debug("remote: spawing a new thread for socket %d", fd);
 			#endif
 			pthread_create(&new_client, NULL, fn_remote_client, (void*)(intptr_t)fd);
 		}

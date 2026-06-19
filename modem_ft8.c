@@ -486,7 +486,6 @@ static int sbitx_ft8_decode(float *signal, int num_samples, bool is_ft8)
 	// Go over candidates and attempt to decode messages
 	for (int idx = 0; idx < num_candidates; ++idx)
 	{
-			char buff[1000];
 			const candidate_t* cand = &candidate_list[idx];
 			if (cand->score < kMin_score)
 					continue;
@@ -554,16 +553,16 @@ static int sbitx_ft8_decode(float *signal, int num_samples, bool is_ft8)
 					}
 			} while (!found_empty_slot && !found_duplicate);
 
-			// char buff[1000];
+			char buff[1000];
 			if (found_empty_slot) {
 				// Fill the empty hashtable slot
 				memcpy(&decoded[idx_hash], &message, sizeof(message));
 				decoded_hashtable[idx_hash] = &decoded[idx_hash];
 				++num_decoded;
 
-				 	//sprintf(buff, "%s %3d %+03d %-4.0f ~  %s\n", time_str, 
-				 	sprintf(buff, "%s %3d %+03d %-4.0f ~  %s", time_str, 
-						cand->score, cand->snr, freq_hz, message.text);
+				//sprintf(buff, "%s %3d %+03d %-4.0f ~  %s\n", time_str, 
+				sprintf(buff, "%s %3d %+03d %-4.0f ~  %s", time_str, 
+					cand->score, cand->snr, freq_hz, message.text);
 
 				// message_add(char *mode, unsigned int frequency,
 				//	int outgoing, char *message);
@@ -574,11 +573,14 @@ static int sbitx_ft8_decode(float *signal, int num_samples, bool is_ft8)
 				#endif
 
 				if (strstr(buff, mycallsign_upper)){
-						write_console(FONT_FT8_REPLY, buff);
-						ft8_process(buff, FT8_CONTINUE_QSO);
+					write_console(FONT_FT8_REPLY, buff);
+					ft8_process(buff, FT8_CONTINUE_QSO);
+				}
+				else {
+					if (strstr(buff, "CQ")) {	// [mee] 6/19/26 only show CQ
+						write_console(FONT_FT8_RX, buff);
 					}
-				else 
-					write_console(FONT_FT8_RX, buff);
+				}
 
 				// save_message('R', cand->score, cand-snr,freq_hz, message.text);
 				n_decodes++;
@@ -604,27 +606,31 @@ void ft8_setmode(int config){
 	switch(config){
 		case FT8_MANUAL:
 			ft8_mode = FT8_MANUAL;
-			write_console(FONT_LOG, "FT8 is manual now.\nSend messages through the keyboard\n");
+			write_console(FONT_LOG, "FT8 is manual now.");
+			write_console(FONT_LOG, "Send messages through the keyboard");
 			break;
 		case FT8_SEMI:
-			write_console(FONT_LOG, "FT8 is semi-automatic.\nClick on the callsign to start the QSO\n");
+			write_console(FONT_LOG, "FT8 is semi-automatic.");
+			write_console(FONT_LOG, "Click on the callsign to start the QSO");
 			ft8_mode = FT8_SEMI;
 			break;
 		case FT8_AUTO:
-			write_console(FONT_LOG, "FT8 is automatic.\nIt will call CQ and QSO with the first reply.\n");
+			write_console(FONT_LOG, "FT8 is automatic.");
+			write_console(FONT_LOG, "It will call CQ and QSO with the first reply.");
 			ft8_mode = FT8_AUTO;
 			break;
 	}
 }
 
 static void ft8_start_tx(int offset_seconds){
-	char buff[1000];
 	// timestamp the packets for display log
 	time_t	rawtime = time(NULL); // time_sbitx();
 	struct tm *t = gmtime(&rawtime);
 
-  sprintf(buff, "%02d%02d%02d  TX +00 %04d ~  %s\n", t->tm_hour, t->tm_min, t->tm_sec, ft8_pitch, ft8_tx_text);
+	char buff[80];
+  sprintf(buff, "%02d%02d%02d  TX +00 %04d ~  %s", t->tm_hour, t->tm_min, t->tm_sec, ft8_pitch, ft8_tx_text);
 	write_console(FONT_FT8_TX, buff);
+
 	message_add("FT8", ft8_pitch, 1, ft8_tx_text);
 
 	ft8_tx_nsamples = sbitx_ft8_encode(ft8_tx_text, ft8_pitch, ft8_tx_buff, false); 
@@ -634,7 +640,7 @@ static void ft8_start_tx(int offset_seconds){
 // the ft8_tx() only schedules the transmission
 // it is picked up by ft8_poll to do the actuall transmission
 void ft8_tx(char *message, int freq){
-	char cmd[200], buff[1000];
+	char cmd[200];
 	FILE	*pf;
 	time_t	rawtime = time(NULL); // time_sbitx();
 	struct tm *t = gmtime(&rawtime);
@@ -644,7 +650,9 @@ void ft8_tx(char *message, int freq){
 	strcpy(ft8_tx_text, message);
 
 	ft8_pitch = freq;
-  sprintf(buff, "%02d%02d%02d  TX +00 %04d ~  %s\n", t->tm_hour, t->tm_min, t->tm_sec, ft8_pitch, ft8_tx_text);
+
+	char buff[80];
+  sprintf(buff, "%02d%02d%02d  TX +00 %04d ~  %s", t->tm_hour, t->tm_min, t->tm_sec, ft8_pitch, ft8_tx_text);
 	write_console(FONT_FT8_QUEUED, buff);
 
 	// also set the times of transmission
@@ -972,7 +980,7 @@ void ft8_process(char *message, int operation){
 
 	#ifdef LOG
 		// printf("ft8_process:%d[%s]\n", operation, message);
-		log_info("ft8_process: %d [%s]", operation, message);
+		log_debug("ft8_process: %d [%s]", operation, message);
 	#endif
 
 	if (ft8_message_tokenize(message) == -1)

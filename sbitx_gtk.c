@@ -750,39 +750,23 @@ struct field main_controls[] = {
 
 	//row 1
 	{"#mf1", do_macro, 0, 1360, 65, 40, "F1", 1, "CQ", FIELD_BUTTON, FONT_FIELD_VALUE,"", 0,0,0,0}, 
-
 	{"#mf2", do_macro, 65, 1360, 65, 40, "F2", 1, "Call", FIELD_BUTTON, FONT_FIELD_VALUE,"", 0,0,0,0}, 
-
 	{"#mf3", do_macro, 130, 1360, 65, 40, "F3", 1, "Reply", FIELD_BUTTON, FONT_FIELD_VALUE,"", 0,0,0,0}, 
-
 	{"#mf4", do_macro, 195, 1360, 65, 40, "F4", 1, "RRR", FIELD_BUTTON, FONT_FIELD_VALUE,"", 0,0,0,0}, 
-
 	{"#mf5", do_macro, 260, 1360, 70, 40, "F5", 1, "73", FIELD_BUTTON, FONT_FIELD_VALUE,"", 0,0,0,0}, 
-
 	{"#mf6", do_macro, 330, 1360, 70, 40, "F6", 1, "Call", FIELD_BUTTON, FONT_FIELD_VALUE,"", 0,0,0,0}, 
 
 	//row 2
-
 	{"#mf7", do_macro, 0, 1400, 65, 40, "F7", 1, "Exch", FIELD_BUTTON, FONT_FIELD_VALUE,"", 0,0,0,0}, 
-
 	{"#mf8", do_macro, 65, 1400, 65, 40, "F8", 1, "Tu", FIELD_BUTTON, FONT_FIELD_VALUE,"", 0,0,0,0}, 
-
 	{"#mf9", do_macro, 130, 1400, 65, 40, "F9", 1, "Rpt", FIELD_BUTTON, FONT_FIELD_VALUE,"", 0,0,0,0}, 
-
 	{"#mf10", do_macro, 195, 1400, 65, 40, "F10", 1, "", FIELD_BUTTON, FONT_FIELD_VALUE,"", 0,0,0,0}, 
-
 	{"#mf11", do_macro, 260, 1400, 70, 40, "F11", 1, "", FIELD_BUTTON, FONT_FIELD_VALUE,"", 0,0,0,0}, 
-
 	{"#mf12", do_macro, 330, 1400, 70, 40, "F12", 1, "", FIELD_BUTTON, FONT_FIELD_VALUE,"", 0,0,0,0}, 
 
 	//row 3
-
-
-
 	{"#mfedit", do_macro, 195, 1440, 65, 40, "Edit", 1, "", FIELD_BUTTON, FONT_FIELD_VALUE,"", 0,0,0,0}, 
-
 	{"#mfspot"	, do_macro, 260, 1440, 70, 40, "Spot", 1, "", FIELD_BUTTON, FONT_FIELD_VALUE,"", 0,0,0,0}, 
-
 	{"#mfkbd", do_macro, 330, 1440, 70, 40, "Kbd", 1, "", FIELD_BUTTON, FONT_FIELD_VALUE,"", 0,0,0,0}, 
 
 	//the last control has empty cmd field 
@@ -1122,7 +1106,6 @@ void write_console(int style, char *raw_text){
 		strcat(directory, "/sbitx/data/display_log.txt");
   #endif
 
-
 	#ifdef LOG
   	// tlog("write_console", text, style);
 		log_debug("write_console %d, [%s]", style, raw_text);
@@ -1136,34 +1119,23 @@ void write_console(int style, char *raw_text){
 		return;
 
 	sprintf(remote_text, "%d %s\n", style, raw_text);
-	#ifdef LOG
-		log_debug("after sprintf: [%s]", raw_text);
-	#endif
 	hd_decorate(style, raw_text, decorated);
-	#ifdef LOG
-		log_debug("after hd_decorate: [%s],[%s]", raw_text, decorated);
-	#endif
 	text = decorated;
 	web_write(style, text);
-	#ifdef LOG
-		log_debug("after web_write");
-	#endif
 	sprintf(remote_text, "%d %s\n", style, text);
-	#ifdef LOG
-		log_debug("after sprintf 2");
-	#endif
 	remote_write(remote_text);
-	//move to a new line if the style has changed
+
+	// move to a new line if the style has changed
 	if (style != console_style){
 		q_write(&q_web, '{');
 		q_write(&q_web, style + 'A');
 		console_style = style;
-		if (strlen(console_stream[console_current_line].text)> 0)
+		if (strlen(console_stream[console_current_line].text) > 0)
 			console_init_next_line();	
 		console_stream[console_current_line].style = style;
 		switch(style){
 			case FONT_FT8_RX:
-		case FONT_FLDIGI_RX:
+			case FONT_FLDIGI_RX:
 			case FONT_CW_RX:
 				break;
 			case FONT_FT8_TX:
@@ -1175,7 +1147,6 @@ void write_console(int style, char *raw_text){
 				break;
 		}
 	}
-
 
 	int console_line_max = MIN(console_cols, MAX_LINE_LENGTH);
 	while(*text){
@@ -1197,12 +1168,21 @@ void write_console(int style, char *raw_text){
 				p = console_stream[console_current_line].text;
 				len = 0;
 			}
-		
-			//printf("Adding %c to %d\n", (int)c, console_current_line);	
+	
+			#ifdef LOG	
+				// printf("Adding %c to %d\n", (int)c, console_current_line);	
+				// log_debug("Adding %c to %d", (int)c, console_current_line);	
+			#endif
+
 			p[len++] = c & 0x7f;
 			p[len] = 0;
 		}
 		text++;	
+	}
+
+	// [mee] 26/06/19
+	if (style == FONT_LOG) {
+		console_init_next_line();
 	}
 
 	struct field *f = get_field("#console");
@@ -1512,12 +1492,22 @@ void enter_qso(){
 
 	// skip empty or half filled log entry
 	if (strlen(callsign) < 3 || strlen(rst_sent) < 1 || strlen(rst_received) < 1){
-		printf("log entry is empty [%s], [%s], [%s], no log created\n", callsign, rst_sent, rst_received);
+		#ifdef LOG
+			// printf("log entry is empty [%s], [%s], [%s], no log created\n",
+			//	callsign, rst_sent, rst_received);
+			log_info("log entry is empty [%s], [%s], [%s], no log created",
+				callsign, rst_sent, rst_received);
+		#endif
 		return;
 	}
  
 	if (logbook_count_dup(field_str("CALL"), 60)){
-		printf("Duplicate log entry not accepted for %s within two minutes of last entry of %s.\n", callsign, callsign);
+		#ifdef LOG
+			// printf("Duplicate log entry not accepted for %s within two minutes of last entry of %s.\n",
+			// 	callsign, callsign);
+			log_info("Duplicate log entry not accepted for %s within two minutes of last entry of %s",
+				callsign, callsign);
+		#endif
 		return;
 	}	
 	logbook_add(get_field("#contact_callsign")->value, 
@@ -1526,7 +1516,7 @@ void enter_qso(){
 		get_field("#rst_received")->value, 
 		get_field("#exchange_received")->value);
 	char buff[100];
-	sprintf(buff, "Logged: %s %s-%s %s-%s\n", 
+	sprintf(buff, "Logged: %s %s-%s %s-%s", 
 		field_str("CALL"), field_str("SENT"), field_str("NR"), 
 		field_str("RECV"), field_str("EXCH"));
 	write_console(FONT_LOG, buff);
@@ -3106,19 +3096,19 @@ int do_tuning(struct field *f, cairo_t *gfx, int event, int a, int b, int c){
     uint64_t delta_us = (this_change_time.tv_sec - last_change_time.tv_sec) * 1000000 + (this_change_time.tv_nsec - last_change_time.tv_nsec) / 1000;
     char temp_char[100];
     //sprintf(temp_char, "delta: %d", delta_us);
-    //strcat(temp_char,"\r\n");
+    // //strcat(temp_char,"\r\n");
     //write_console(FONT_LOG, temp_char);
     clock_gettime(CLOCK_MONOTONIC_RAW, &last_change_time);
     if (delta_us < atof(get_field("tuning_accel_thresh2")->value)){
       if (tuning_step < 10000){
         tuning_step = tuning_step * 100;
-        //sprintf(temp_char, "x100 activated\r\n");
+        //sprintf(temp_char, "x100 activated");
         //write_console(FONT_LOG, temp_char);
       }
     } else if (delta_us < atof(get_field("tuning_accel_thresh1")->value)){
       if (tuning_step < 1000){
         tuning_step = tuning_step * 10;
-        //printf(temp_char, "x10 activated\r\n");
+        //sprintf(temp_char, "x10 activated");
         //write_console(FONT_LOG, temp_char);
       }
     }
@@ -4249,7 +4239,7 @@ gboolean ui_tick(gpointer gook){
 	while (tuning_ticks > 0){
 		edit_field(f, MIN_KEY_DOWN);
 		tuning_ticks--;
-    //sprintf(message, "tune-\r\n");
+    //sprintf(message, "tune-");
     //write_console(FONT_LOG, message);
 
 	}
@@ -4257,7 +4247,7 @@ gboolean ui_tick(gpointer gook){
 	while (tuning_ticks < 0){
 		edit_field(f, MIN_KEY_UP);
 		tuning_ticks++;
-    //sprintf(message, "tune+\r\n");
+    //sprintf(message, "tune+");
     //write_console(FONT_LOG, message);
 	}
 
@@ -4571,7 +4561,7 @@ void utc_set(char *args, int update_rtc){
 			"  hh is two digit hour in 24 hour format (UTC)\n"
 			"  mm is two digit minutes in 24 hour format(UTC)\n"
 			"  ss is two digit seconds in [0-59]\n"
-			"ex: \\utc 2022 07 14 8:40:00\n"); 
+			"ex: \\utc 2022 07 14 8:40:00"); 
 			return;
 	}
 
@@ -4593,7 +4583,7 @@ void utc_set(char *args, int update_rtc){
 	setenv("TZ", "UTC", 1);	
 	gm_now = mktime(&t);
 
-	write_console(FONT_LOG, "UTC time is set\n");
+	write_console(FONT_LOG, "UTC time is set");
 }
 
 
@@ -4762,7 +4752,7 @@ void do_control_action(char *cmd){
 	else if(!strcmp(request, "TUNE OFF")){
 		#ifdef LOG
 			// puts("Turning off TUNE");
-			log_info("Turning off TUNE");
+			log_debug("Turning off TUNE");
 		#endif
 		tx_off();
 		if (tune_tx_saved_mode[0]){
@@ -4782,12 +4772,12 @@ void do_control_action(char *cmd){
 		char request[300], response[100];
 		sprintf(request, "record=%s", fullpath);
 		sdr_request(request, response);
-		sprintf(request, "Recording:%s\n", fullpath);
+		sprintf(request, "Recording:%s", fullpath);
 		write_console(FONT_LOG, request);
 	}
 	else if (!strcmp(request, "REC OFF")){
 		sdr_request("record", "off");
-		write_console(FONT_LOG, "Recording stopped\n");
+		write_console(FONT_LOG, "Recording stopped");
 		record_start = 0;
 	}
 	else if (!strcmp(request, "QRZ") && strlen(field_str("CALL")) > 0)
@@ -4968,7 +4958,7 @@ void cmd_exec(char *cmd){
 	}
 	else if (!strcmp(exec, "callsign")){
 		strcpy(get_field("#mycallsign")->value,args); 
-		sprintf(response, "\n[Your callsign is set to %s]\n", get_field("#mycallsign")->value);
+		sprintf(response, "[Your callsign is set to %s]", get_field("#mycallsign")->value);
 		write_console(FONT_LOG, response);
 	}
 	else if (!strcmp(exec, "QSODEL")){
@@ -4993,12 +4983,12 @@ void cmd_exec(char *cmd){
 	// else if (!strcmp(exec, "rtc"))
 	// 	rtc_read();
 	else if (!strcmp(exec, "txcal")){
-		char response[10];
+		// char response[10];
 		sdr_request("txcal=", response);
 	}
 	else if (!strcmp(exec, "grid")){	
 		set_field("#mygrid", args);
-		sprintf(response, "\n[Your grid is set to %s]\n", get_field("#mygrid")->value);
+		sprintf(response, "[Your grid is set to %s]", get_field("#mygrid")->value);
 		write_console(FONT_LOG, response);
 	}
 	else if (!strcmp(exec, "utc")){
@@ -5022,12 +5012,12 @@ void cmd_exec(char *cmd){
 			set_field("#current_macro", args);
 		}
 		else if (strlen(get_field("#current_macro")->value)){
-			write_console(FONT_LOG, "current macro is ");
-			write_console(FONT_LOG, get_field("#current_macro")->value);
-			write_console(FONT_LOG, "\n");
+			sprintf(response, "current macro is %s", get_field("#current_macro")->value);
+			write_console(FONT_LOG,response);
+
 		}
 		else
-			write_console(FONT_LOG, "macro file not loaded\n");
+			write_console(FONT_LOG, "macro file not loaded");
 	}
 	else if (!strcmp(exec, "qso"))
 		enter_qso(args);
@@ -5040,14 +5030,14 @@ void cmd_exec(char *cmd){
 			if (atoi(args))
 				set_field("#contest_serial", args);
 		}
-		write_console(FONT_LOG, "Exchange set to [");
-		write_console(FONT_LOG, get_field("#sent_exchange")->value);
-		write_console(FONT_LOG, "]\n");
+		sprintf(response, "Exchange set to [%s]", get_field("#sent_exchange")->value);
+		write_console(FONT_LOG, response);
+	
 	}
 	else if(!strcmp(exec, "freq") || !strcmp(exec, "f")){
 		long freq = atol(args);
 		if (freq == 0){
-			write_console(FONT_LOG, "Usage: \f xxxxx (in Hz or KHz)\n");
+			write_console(FONT_LOG, "Usage: \f xxxxx (in Hz or KHz)");
 		}
 		else if (freq < 30000)
 			freq *= 1000;
@@ -5068,7 +5058,7 @@ void cmd_exec(char *cmd){
 		if(strlen(args))
 			qrz(args);
 		else
-			write_console(FONT_LOG, "/qrz [callsign]\n");
+			write_console(FONT_LOG, "/qrz [callsign]");
 	}
 	else if (!strcmp(exec, "mode") || !strcmp(exec, "m") || !strcmp(exec, "MODE")){
 		set_radio_mode(args);
@@ -5102,7 +5092,7 @@ void cmd_exec(char *cmd){
 				write_console(FONT_LOG, "cw pitch should be 100-4000");
 		}
 		char buff[100];
-		sprintf(buff, "txpitch is set to %d Hz\n", get_cw_tx_pitch());
+		sprintf(buff, "txpitch is set to %d Hz", get_cw_tx_pitch());
 		write_console(FONT_LOG, buff);
 	}
 /*	else if (!strcmp(exec, "PITCH")){
@@ -5116,7 +5106,7 @@ void cmd_exec(char *cmd){
 		char buff[1000];
 		#ifdef LOG
 			// printf("executing macro %s\n", exec);
-			log_info("executing macro %s", exec);
+			log_debug("executing macro %s", exec);
 		#endif
 		do_macro(get_field_by_label(exec), NULL, GDK_BUTTON_PRESS, 0, 0, 0);
 		//macro_exec(atoi(exec+1), buff);
@@ -5176,7 +5166,7 @@ int main( int argc, char* argv[] ) {
 	} else {
 		ll = LOG_FATAL + 1; 
 	}
-	puts("");
+	puts("\n");
 
 	log_set_level(ll);
 
@@ -5261,17 +5251,18 @@ int main( int argc, char* argv[] ) {
 
 	console_init();
 	write_console(FONT_LOG, VER_STR);
-  write_console(FONT_LOG, "\r\nEnter \\help for help\r\n");
+  write_console(FONT_LOG, "Enter \\help for help");
 
-	if (strcmp(get_field("#mycallsign")->value, "NOBADY")){
-		sprintf(buff, "\nWelcome %s\nYour grid is %s\n", 
-		get_field("#mycallsign")->value, get_field("#mygrid")->value);
+	if (strcmp(get_field("#mycallsign")->value, "NOBODY")){
+		sprintf(buff, "Welcome %s", get_field("#mycallsign")->value);
+		write_console(FONT_LOG, buff);
+		sprintf(buff, "Your grid is %s", get_field("#mygrid")->value);
 		write_console(FONT_LOG, buff);
 	}
-	else 
-		write_console(FONT_LOG, "Set your callsign with '\\callsign [yourcallsign]'\n"
-		"Set your 6 letter grid with '\\grid [yourgrid]\n");
-
+	else { 
+		write_console(FONT_LOG, "Set your callsign with \\callsign [yourcallsign]");
+		write_console(FONT_LOG, "Set your 6 letter grid with \\grid [yourgrid]");
+	}
 	set_field("#text_in", "");
 	field_set("REC", "OFF");
 	field_set("KBD", "OFF");
