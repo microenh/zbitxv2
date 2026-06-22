@@ -8,6 +8,7 @@
 #include "log.h"
 #include "logbook.h"
 #include "hist_disp.h"
+#include "get_exe_path.h"
 
 bool isLetter(char c) {
     return c >= 'A' && c <= 'Z';
@@ -34,13 +35,14 @@ void addGridToFile(char * gridId, int cnt) {
 }
 
 void hd_createGridList() {
-	 onfFout = fopen("./web/grids.txt", "wb");
+	const char *grids = malloc_file_path("web/grids.txt", "", "");
+	onfFout = fopen(grids, "wb");
+	free((void *) grids);
+	logbook_open();
+	logbook_get_grids(addGridToFile);
 
-		logbook_open();
-		logbook_get_grids(addGridToFile);
-
-        fwrite("\0\0", 1, 2, onfFout);
-        if (onfFout != NULL) fclose(onfFout);
+  fwrite("\0\0", 1, 2, onfFout);
+  if (onfFout != NULL) fclose(onfFout);
 }
 
 struct hd_message_struct {

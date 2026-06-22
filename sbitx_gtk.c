@@ -5180,7 +5180,10 @@ void ensure_single_instance(){
 	int rc = flock(pid_file, LOCK_EX | LOCK_NB);
 	if(rc) {
     if(EWOULDBLOCK == errno){
-			printf("Another instance of sbitx is already running\n");
+			#ifdef LOG
+				//printf("Another instance of sbitx is already running\n");
+				log_fatal("Another instance of sbitx is already running");
+			#endif
 			exit(0);
 		}	
 	}
@@ -5195,17 +5198,17 @@ int main( int argc, char* argv[] ) {
 		ll = argv[1][0] - '0';
 		if (ll < LOG_TRACE) ll = LOG_TRACE;
 		if (ll > LOG_FATAL) ll = LOG_FATAL;
-		printf("Log level: %s", log_level_string(ll));
 	} else {
-		ll = LOG_FATAL + 1; 
+		ll = LOG_FATAL; 
 	}
+	printf("Log level: %s", log_level_string(ll));
 	puts("\n");
 
 	log_set_level(ll);
 
 	active_layout = main_controls;
 
-	//unlink any pending ft8 transmission
+	// unlink any pending ft8 transmission
 	// unlink("/home/pi/sbitx/ft8tx_float.raw");
 	const char *ft8x_float = malloc_file_path("ft8x_float.raw", "", "");
 	#ifdef LOG
@@ -5229,10 +5232,11 @@ int main( int argc, char* argv[] ) {
 
 	q_init(&q_remote_commands, 1000); //not too many commands
 
-// If a parameter was passed on the command line, use it as the audio output device	
+	// If a second parameter was passed on the command line,
+	// use it as the audio output device	
 
-	if (argc > 1)
-		setup(argv[1]);
+	if (argc > 2)
+		setup(argv[2]);
 	else
 		setup("plughw:0,0");	// otherwise use the default audio output device
 
@@ -5244,7 +5248,7 @@ int main( int argc, char* argv[] ) {
 	field_init();		
 
 	hd_createGridList();
-	
+
 	//initialize the modulation display
 
 	tx_mod_max = get_field("spectrum")->width;
@@ -5292,7 +5296,7 @@ int main( int argc, char* argv[] ) {
 		//strcat(directory, "/sbitx/data/default_settings.ini");
 		directory = malloc_file_path("data/default_settings.ini", "", "");
 		#ifdef LOG
-			log_info("directory = %s", directory);
+			log_debug("directory = %s", directory);
 		#endif
   	ini_parse(directory, user_settings_handler, NULL);
   }
@@ -5313,6 +5317,7 @@ int main( int argc, char* argv[] ) {
   set_field("r1:freq", get_field("#vfo_a_freq")->value);
 
 	console_init();
+
 	write_console(FONT_LOG, VER_STR);
   write_console(FONT_LOG, "Enter \\help for help");
 
@@ -5335,6 +5340,7 @@ int main( int argc, char* argv[] ) {
 	// you don't want to save the recently loaded settings
 	settings_updated = 0;
   hamlib_start();
+
 	remote_start_thread();
 
 	// rtc_read();
