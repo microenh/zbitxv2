@@ -230,9 +230,6 @@ void hd_strip_decoration(char * ft8_message, char * decorated) {
 }
 
 int hd_decorate(int style, char *message, char *decorated) {
-	#ifdef LOG
-		log_debug("begin hd_decorate");
-	#endif
 	switch (style) {
 	case FONT_FT8_RX:
 	case FONT_FT8_TX:
@@ -250,69 +247,27 @@ int hd_decorate(int style, char *message, char *decorated) {
 			if (res == 0) {
 				if (!strcmp(fms.m1, "CQ")) { 
 					if (fms.m4[0] == 0) { // CQ caller grid
-						#ifdef LOG
-							log_debug("before ff_style 1");
-						#endif
 						ff_style(decorated, &fms, style, FONT_LOG, FF_CALLER, FF_GRID, 0);
-						#ifdef LOG
-							log_debug("after ff_style 1");
-						#endif
 					}
 					else { // CQ DX caller grid
-						#ifdef LOG
-							log_debug("before ff_style 2");
-						#endif
 						ff_style(decorated, &fms, style, FONT_LOG, FONT_LOG, FF_CALLER, FF_GRID);
-						#ifdef LOG
-							log_debug("after ff_style 2");
-						#endif
 					}
 				} else if (!strcmp(fms.m1, my_callsign)) 
 				{ // mycall caller grid|report
-					#ifdef LOG
-						log_debug("before ff_style 3");
-					#endif
 					ff_style(decorated, &fms, style, FF_MYCALL, FF_CALLER, FF_GRID, 0);
-					#ifdef LOG
-						log_debug("after ff_style 3");
-					#endif
 				} else if (!strcmp(fms.m2, my_callsign)) 
 				{ // caller mycall grid|report
-					#ifdef LOG
-						log_debug("before ff_style 4");
-					#endif
 					ff_style(decorated, &fms, style, FF_CALLER, FF_MYCALL, FF_GRID, 0);
-					#ifdef LOG
-						log_debug("after ff_style 4");
-					#endif
 				} else 
 				{ // other caller grid|report
-					#ifdef LOG
-						log_debug("before ff_style 5");
-					#endif
 					ff_style(decorated, &fms, style, style, FF_CALLER, FF_GRID, 0);
-					#ifdef LOG
-						log_debug("after ff_style 5");
-					#endif
 				}
 			}
-			#ifdef LOG
-				log_debug("return hd_decorate %d", res);
-			#endif
 			return res;
 		}
 		break;
 	default:
-		#ifdef LOG
-			log_debug("default");
-		#endif
 		strcpy(decorated, message);
-		#ifdef LOG
-			log_debug("after strcpy");
-		#endif
 	}
-	#ifdef LOG
-		log_debug("return hd_decorate 0");
-	#endif
 	return 0;
 }

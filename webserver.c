@@ -12,6 +12,7 @@
 #include "logbook.h"
 #include "hist_disp.h"
 #include "log.h"
+#include "get_exe_path.h"
 
 static const char *s_listen_on = "ws://0.0.0.0:8080";
 static char s_web_root[1000];
@@ -303,10 +304,16 @@ void webserver_stop(){
 static pthread_t webserver_thread;
 
 void webserver_start(){
-	char directory[200];	//dangerous, find the MAX_PATH and replace 200 with it
-	char *path = getenv("HOME");
-	strcpy(s_web_root, path);
-	strcat(s_web_root, "/sbitx/web");
+	// char directory[200];	//dangerous, find the MAX_PATH and replace 200 with it
+	//char *path = getenv("HOME");
+	//strcpy(s_web_root, path);
+	//strcat(s_web_root, "/sbitx/web");
+	strcpy(s_web_root, get_exe_path());
+	strcat(s_web_root, "web");
+
+	#ifdef LOG
+		log_debug("s_web_root: %s", s_web_root);
+	#endif
 
 	//logbook_open();
  	pthread_create( &webserver_thread, NULL, webserver_thread_function, 

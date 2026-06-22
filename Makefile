@@ -14,29 +14,30 @@ LDFLAGS =    \
 	-pthread   \
 	$(shell pkg-config --libs gtk+-3.0)
 
-SRCS =          \
-	$(TARGET).c   \
-	fft_filter.c  \
-	hamlib.c      \
-	hist_disp.c   \
-	ini.c         \
-	log.c         \
-	logbook.c     \
-	macros.c      \
-	modem_cw.c    \
-	modem_ft8.c   \
-	modems.c      \
-	mongoose.c    \
-	queue.c       \
-	remote.c      \
-	sbitx_gtk.c   \
-	sbitx_sound.c \
-	sbitx_utils.c \
-	settings_ui.c \
-	si5351v2.c    \
-	si570.c       \
-	telnet.c      \
-	vfo.c         \
+SRCS =           \
+	$(TARGET).c    \
+	fft_filter.c   \
+	get_exe_path.c \
+	hamlib.c       \
+	hist_disp.c    \
+	ini.c          \
+	log.c          \
+	logbook.c      \
+	macros.c       \
+	modem_cw.c     \
+	modem_ft8.c    \
+	modems.c       \
+	mongoose.c     \
+	queue.c        \
+	remote.c       \
+	sbitx_gtk.c    \
+	sbitx_sound.c  \
+	sbitx_utils.c  \
+	settings_ui.c  \
+	si5351v2.c     \
+	si570.c        \
+	telnet.c       \
+	vfo.c          \
 	webserver.c
 
 OBJS = $(SRCS:.c=.o) 
