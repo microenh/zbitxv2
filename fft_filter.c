@@ -10,6 +10,8 @@
 #include <sys/mman.h>
 #include <unistd.h>
 #include "sdr.h"
+#include "log.h"
+#include "get_exe_path.h"
 
 // Wisdom Defines for the FFTW and FFTWF libraries
 // Options for WISDOM_MODE from least to most rigorous are FFTW_ESTIMATE, FFTW_MEASURE, FFTW_PATIENT, and FFTW_EXHAUSTIVE
@@ -18,7 +20,7 @@
 // if the Wisdom plans in the file were generated at the same or more rigorous level.
 #define WISDOM_MODE FFTW_MEASURE
 #define PLANTIME -1		// spend no more than plantime seconds finding the best FFT algorithm. -1 turns the platime cap off.
-char wisdom_file_f[] = "/home/pi/sbitx/data/sbitx_wisdom_f.wis";  // Moved to default data directory - N3SB
+// char wisdom_file_f[] = "/home/pi/sbitx/data/sbitx_wisdom_f.wis";  // Moved to default data directory - N3SB
 
 // Modified Bessel function of the 0th kind, used by the Kaiser window
 const float i0(float const z){
@@ -89,6 +91,11 @@ int make_hann_window(float *window, int max_count){
 // Phase is adjusted so "time zero" (cGenter of impulse response) is at M/2
 // L and M refer to the decimated output
 int window_filter(int const L,int const M,complex float * const response,float const beta){
+	char wisdom_file_f[200];
+	snprintf(wisdom_file_f, sizeof(wisdom_file_f), "%s%s", get_exe_path(), "data/sbitx_wisdom_f.wis");
+	#ifdef LOG
+		log_debug("wisdom file: %s", wisdom_file_f);
+	#endif
 
 	//total length of the convolving samples
   int const N = L + M - 1;

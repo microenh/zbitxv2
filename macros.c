@@ -4,6 +4,8 @@
 #include <dirent.h>
 #include <stdint.h>
 #include "sdr_ui.h"
+#include "log.h"
+#include "get_exe_path.h"
 
 int macro_exec(int key, char *dest);
 void macro_get_var(char *var, char *s);
@@ -39,9 +41,16 @@ void macro_get_keys(char *output){
 void macro_list(char *output){
 	char full_path[200];	//dangerous, find the MAX_PATH and replace 200 with it
 
-	char *home_path = getenv("HOME");
-	strcpy(full_path, home_path);
-	strcat(full_path, "/sbitx/web/");
+	//char *home_path = getenv("HOME");
+	//strcpy(full_path, home_path);
+	//strcat(full_path, "/sbitx/web/");
+
+	snprintf(full_path, sizeof(full_path), "%sweb/", get_exe_path());
+
+	#ifdef LOG
+		log_debug("macro directory: %s", full_path);
+	#endif
+
 	DIR *d = opendir(full_path);
   struct dirent *dir;
 
@@ -83,11 +92,16 @@ int  macro_load(char *filename, char *output){
 	char macro_line[255];
 	char full_path[200];	//dangerous, find the MAX_PATH and replace 200 with it
 
-	char *home_path = getenv("HOME");
-	strcpy(full_path, home_path);
-	strcat(full_path, "/sbitx/web/");
-	strcat(full_path, filename);
-	strcat(full_path, ".mc");
+	// char *home_path = getenv("HOME");
+	// strcpy(full_path, home_path);
+	// strcat(full_path, "/sbitx/web/");
+	// strcat(full_path, filename);
+	// strcat(full_path, ".mc");
+	snprintf(full_path, sizeof(full_path), "%sweb/%s.mc", get_exe_path(), filename);
+	#ifdef LOG
+		log_debug("macro file: %s", full_path);
+	#endif
+
 	FILE *pf = fopen(full_path, "r");
 
 	if(!pf)

@@ -22,6 +22,8 @@
 #include "si5351.h"
 #include "ini.h"
 #include "log.h"
+#include "get_exe_path.h"
+
 int set_field(char *, char *);  // This should be moved to a .h file
 
 #define DEBUG 0
@@ -64,7 +66,8 @@ void tr_switch(int tx_on);
 // if the Wisdom plans in the file were generated at the same or more rigorous level.
 #define WISDOM_MODE FFTW_MEASURE
 #define PLANTIME -1		// spend no more than plantime seconds finding the best FFT algorithm. -1 turns the platime cap off.
-char wisdom_file[] = "/home/pi/sbitx/data/sbitx_wisdom.wis";		// Moved to default data directory - N3SB
+//char wisdom_file[] = "/home/pi/sbitx/data/sbitx_wisdom.wis";		// Moved to default data directory - N3SB
+char wisdom_file[200];
 
 fftw_complex *fft_out;		// holds the incoming samples in freq domain (for rx as well as tx)
 fftw_complex *fft_in;			// holds the incoming samples in time domain (for rx as well as tx) 
@@ -1102,19 +1105,29 @@ static int hw_settings_handler(void* user, const char* section,
 
 static void read_hw_ini(){
 	hw_init_index = 0;
-	char directory[PATH_MAX];
-	char *path = getenv("HOME");
-	strcpy(directory, path);
-	strcat(directory, "/sbitx/data/hw_settings.ini");
+	// char directory[PATH_MAX];
+	// char *path = getenv("HOME");
+	// strcpy(directory, path);
+	// strcat(directory, "/sbitx/data/hw_settings.ini");
+
+	char directory[200];
+	snprintf(directory, sizeof(directory), "%sdata/hw_settings.ini", get_exe_path());
+	#ifdef LOG
+		log_debug("hw settings: %s", directory);
+	#endif
   if (ini_parse(directory, hw_settings_handler, NULL)<0){
 		#ifdef LOG
 			// printf("Unable to load ~/sbitx/data/hw_settings.ini\n"
 			//	"Loading default_hw_settings.ini instead\n");
-			log_warn("Unable to load ~/sbitx/data/hw_settings.ini");
+			log_warn("Unable to load hw_settings.ini");
 			log_warn("Loading default_hw_settings.ini instead");
 		#endif
-		strcpy(directory, path);
-		strcat(directory, "/sbitx/data/default_hw_settings.ini");
+		// strcpy(directory, path);
+		// strcat(directory, "/sbitx/data/default_hw_settings.ini");
+		snprintf(directory, sizeof(directory), "%sdata/default_hw_settings.ini", get_exe_path());
+		#ifdef LOG
+			log_debug("default hw settings: %s", directory);
+		#endif
   	ini_parse(directory, hw_settings_handler, NULL);
   }
 }
@@ -1212,10 +1225,13 @@ static void save_hw_settings(){
 	static int last_save_at = 0;
 	char file_path[200];	//dangerous, find the MAX_PATH and replace 200 with it
 
-	char *path = getenv("HOME");
-	strcpy(file_path, path);
-	strcat(file_path, "/sbitx/data/hw_settings.ini");
-
+	// char *path = getenv("HOME");
+	// strcpy(file_path, path);
+	// strcat(file_path, "/sbitx/data/hw_settings.ini");
+	snprintf(file_path, sizeof(file_path), "%sdata/hw_settings.ini", get_exe_path());
+	#ifdef LOG
+		log_info("save hw settings: %s", file_path);
+	#endif
 	FILE *f = fopen(file_path, "w");
 	if (!f){
 		#ifdef LOG
@@ -1476,6 +1492,10 @@ void setup(char *audio_output_device){
 		log_debug("Audio Output Device is: %s", audio_output_device);
 	#endif
 
+	snprintf(wisdom_file, sizeof(wisdom_file), "%sdata/sbitx_wisdom.wis", get_exe_path());
+	#ifdef LOG
+		log_debug("wisdom file: %s", wisdom_file);
+	#endif
 	read_hw_ini();
 
 	//setup the LPF and the gpio pins

@@ -27,7 +27,8 @@
 #include "sdr.h"
 #include "sdr_ui.h"
 #include "logbook.h"
-
+#include "get_exe_path.h"
+#include "log.h"
 #include <sqlite3.h>
 
 static int rc;
@@ -83,9 +84,13 @@ int logbook_query(char *query, int from_id, char *result_file){
 	sqlite3_prepare_v2(db, statement, -1, &stmt, NULL);
 
 	char output_path[200];	//dangerous, find the MAX_PATH and replace 200 with it
-	sprintf(output_path, "%s/sbitx/data/result_rows.txt", getenv("HOME"));
+	// sprintf(output_path, "%s/sbitx/data/result_rows.txt", getenv("HOME"));
+	snprintf(output_path, sizeof(output_path), "%sdata/result_rows.txt", get_exe_path());
 	strcpy(result_file, output_path);
-	
+
+	#ifdef LOG
+		log_debug("logbook_query file: %s", result_file);
+	#endif	
 	FILE *pf = fopen(output_path, "w");
 	if (!pf)
 		return -1;
@@ -267,7 +272,11 @@ int logbook_prev_log(const char *callsign, char *result){
 
 void logbook_open(){
 	char db_path[200];	//dangerous, find the MAX_PATH and replace 200 with it
-	sprintf(db_path, "%s/sbitx/data/sbitx.db", getenv("HOME"));
+	// sprintf(db_path, "%s/sbitx/data/sbitx.db", getenv("HOME"));
+	snprintf(db_path, sizeof(db_path), "%sdata/sbitx.db", get_exe_path());
+	#ifdef LOG
+		log_debug("logbook_open file: %s", db_path);
+	#endif
 
 	rc = sqlite3_open(db_path, &db);
 }
