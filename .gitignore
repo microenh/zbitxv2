@@ -3,5 +3,6 @@ data/*.db
 *.swp
 *.d
 data/results_row.txt
+data/user_settings.ini
 web/grids.txt
 sbitx

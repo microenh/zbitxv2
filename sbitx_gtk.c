@@ -48,6 +48,7 @@ The initial sync between the gui values, the core radio values, settings, et al 
 // #include "oled.h"
 #include "hist_disp.h"
 // #include "ntputil.h"
+#include "get_exe_path.h"
 
 #define FT8_START_QSO 1
 #define FT8_CONTINUE_QSO 0
@@ -1440,7 +1441,7 @@ static char *mode_name(int mode_id, char *name){
 
 static void save_user_settings(int forced){
 	static int last_save_at = 0;
-	char file_path[200];	//dangerous, find the MAX_PATH and replace 200 with it
+	//char file_path[200];	//dangerous, find the MAX_PATH and replace 200 with it
 
 	//attempt to save settings only if it has been 30 seconds since the 
 	//last time the settings were saved
@@ -1448,21 +1449,35 @@ static void save_user_settings(int forced){
 	if ((now < last_save_at + 30000 || !settings_updated) && forced == 0)
 		return;
 
-	char *path = getenv("HOME");
-	strcpy(file_path, path);
-	strcat(file_path, "/sbitx/data/user_settings.ini");
-
+	//char *path = getenv("HOME");
+	//strcpy(file_path, path);
+	//strcat(file_path, "/sbitx/data/user_settings.ini");
+	const char *file_path = malloc_file_path("data/user_settings.ini", "", "");
+	#ifdef LOG
+		log_debug("file_path: %s", file_path);
+	#endif
 	//copy the current freq settings to the currently selected vfo
 	struct field *f_freq = get_field("r1:freq");
 	struct field *f_vfo  = get_field("#vfo");
 
 	FILE *f = fopen(file_path, "w");
 	if (!f){
-		printf("Unable to save %s : %s\n", file_path, strerror(errno));
+		#ifdef LOG
+			// printf("Unable to save %s : %s\n", file_path, strerror(errno));
+			log_warn("Unable to save %s : %s", file_path, strerror(errno));
+		#endif
 		settings_updated = 0;  // stop repeated attempts to write if file cannot be opened.
 		last_save_at = now;
+		free((void *) file_path);
+		#ifdef LOG
+			log_debug("free file_path");
+		#endif
 		return;
 	}
+	free((void *) file_path);
+	#ifdef LOG
+		log_debug("free file_path");
+	#endif
 
   // save the field values
 	int i;
@@ -4392,7 +4407,13 @@ void ui_init(int argc, char *argv[]){
   gtk_window_set_default_size(GTK_WINDOW(window), 800, 480);
   //gtk_window_set_default_size(GTK_WINDOW(window), screen_width, screen_height);
   gtk_window_set_title( GTK_WINDOW(window), "sBITX" );
-	gtk_window_set_icon_from_file(GTK_WINDOW(window), "/home/pi/sbitx/sbitx_icon.png", NULL);
+	const char *icon = malloc_file_path("sbitx_icon.png", "", "");
+	// gtk_window_set_icon_from_file(GTK_WINDOW(window), "/home/pi/sbitx/sbitx_icon.png", NULL);
+	gtk_window_set_icon_from_file(GTK_WINDOW(window), icon,  NULL);
+	free((void *) icon);
+	#ifdef LOG
+		log_debug("free icon");
+	#endif
 
   display_area = gtk_drawing_area_new();
 	gtk_widget_set_size_request(display_area, 500, 400);
@@ -4761,18 +4782,30 @@ void do_control_action(char *cmd){
 		}
 	}
 	else if (!strcmp(request, "REC ON")){
-		char fullpath[200];	//dangerous, find the MAX_PATH and replace 200 with it
+		// char fullpath[200];	//dangerous, find the MAX_PATH and replace 200 with it
 
-		char *path = getenv("HOME");
+		// char *path = getenv("HOME");
 		time(&record_start);
 		struct tm *tmp = localtime(&record_start);
-		sprintf(fullpath, "%s/sbitx/audio/%04d%02d%02d-%02d%02d-%02d.wav", path, 
+		//sprintf(fullpath, "%s/sbitx/audio/%04d%02d%02d-%02d%02d-%02d.wav", path, 
+		//	tmp->tm_year + 1900, tmp->tm_mon + 1, tmp->tm_mday, tmp->tm_hour, tmp->tm_min, tmp->tm_sec); 
+
+		char td_str[17];
+		snprintf(td_str, sizeof(td_str), "%04d%02d%02d-%02d%02d-%02d",
 			tmp->tm_year + 1900, tmp->tm_mon + 1, tmp->tm_mday, tmp->tm_hour, tmp->tm_min, tmp->tm_sec); 
+		const char *fullpath = malloc_file_path("audio/", td_str, ".wav");
+		#ifdef LOG 
+			log_info("audio: %s", fullpath);
+		#endif
 
 		char request[300], response[100];
 		sprintf(request, "record=%s", fullpath);
 		sdr_request(request, response);
 		sprintf(request, "Recording:%s", fullpath);
+		free((void *) fullpath);
+		#ifdef LOG
+			log_info("free fullpath");
+		#endif
 		write_console(FONT_LOG, request);
 	}
 	else if (!strcmp(request, "REC OFF")){
@@ -5173,7 +5206,16 @@ int main( int argc, char* argv[] ) {
 	active_layout = main_controls;
 
 	//unlink any pending ft8 transmission
-	unlink("/home/pi/sbitx/ft8tx_float.raw");
+	// unlink("/home/pi/sbitx/ft8tx_float.raw");
+	const char *ft8x_float = malloc_file_path("ft8x_float.raw", "", "");
+	#ifdef LOG
+		log_debug("ft8x_float %s", ft8x_float);
+	#endif
+	unlink(ft8x_float);
+	free((void *) ft8x_float);
+	#ifdef LOG
+		log_debug("free ft8x_float");
+	#endif
 	call_wipe();
 	
 	//we cache some fields for fast lookup
@@ -5226,17 +5268,38 @@ int main( int argc, char* argv[] ) {
 	set_field("r1:gain", "41");
 	set_field("r1:volume", "85");
 
-	char directory[200];	//dangerous, find the MAX_PATH and replace 200 with it
-	char *path = getenv("HOME");
-	strcpy(directory, path);
-	strcat(directory, "/sbitx/data/user_settings.ini");
+	// char directory[200];	//dangerous, find the MAX_PATH and replace 200 with it
+	// char *path = getenv("HOME");
+	// strcpy(directory, path);
+	// strcat(directory, "/sbitx/data/user_settings.ini");
+	const char *directory = malloc_file_path("data/user_settings.ini","","");
+	#ifdef LOG
+		log_debug("directory = %s", directory);
+	#endif
   if (ini_parse(directory, user_settings_handler, NULL)<0){
-    printf("Unable to load ~/sbitx/data/user_settings.ini\n"
-		"Loading default.ini instead\n");
-		strcpy(directory, path);
-		strcat(directory, "/sbitx/data/default_settings.ini");
+		#ifdef LOG
+    	// printf("Unable to load ~/sbitx/data/user_settings.ini\n"
+			//	"Loading default.ini instead\n");
+    	log_info("Unable to load %s", directory);
+			log_info("Loading default.ini instead");
+		#endif
+		free((void *) directory);
+		#ifdef LOG
+			log_info("free directory");
+		#endif
+		
+		//strcpy(directory, path);
+		//strcat(directory, "/sbitx/data/default_settings.ini");
+		directory = malloc_file_path("data/default_settings.ini", "", "");
+		#ifdef LOG
+			log_info("directory = %s", directory);
+		#endif
   	ini_parse(directory, user_settings_handler, NULL);
   }
+	free((void *) directory);
+	#ifdef LOG
+		log_debug("free directory");
+	#endif
 
 	//the logger fields may have an unfinished qso details
 	call_wipe();

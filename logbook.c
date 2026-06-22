@@ -83,15 +83,20 @@ int logbook_query(char *query, int from_id, char *result_file){
 	//printf("[%s]\n", statement);
 	sqlite3_prepare_v2(db, statement, -1, &stmt, NULL);
 
-	char output_path[200];	//dangerous, find the MAX_PATH and replace 200 with it
+	// char output_path[200];	//dangerous, find the MAX_PATH and replace 200 with it
 	// sprintf(output_path, "%s/sbitx/data/result_rows.txt", getenv("HOME"));
-	snprintf(output_path, sizeof(output_path), "%sdata/result_rows.txt", get_exe_path());
+	// snprintf(output_path, sizeof(output_path), "%sdata/result_rows.txt", get_exe_path());
+	const char *output_path = malloc_file_path("data/result_rows.txt", "", "");
 	strcpy(result_file, output_path);
-
 	#ifdef LOG
+		log_debug("output_path: %s", output_path);
 		log_debug("logbook_query file: %s", result_file);
 	#endif	
 	FILE *pf = fopen(output_path, "w");
+  free((void *) output_path);
+	#ifdef LOG
+		log_debug("free output_path");
+	#endif
 	if (!pf)
 		return -1;
 
@@ -117,10 +122,10 @@ int logbook_query(char *query, int from_id, char *result_file){
 				sprintf(param, "%d", sqlite3_column_type(stmt, i));
 				break;
 			}
-			//printf("%s|", param);
+			// printf("%s|", param);
 			fprintf(pf, "%s|", param);
 		}
-		//printf("\n");
+		// printf("\n");
 		fprintf(pf, "\n");
 	}
 	sqlite3_finalize(stmt);
@@ -271,14 +276,19 @@ int logbook_prev_log(const char *callsign, char *result){
 }
 
 void logbook_open(){
-	char db_path[200];	//dangerous, find the MAX_PATH and replace 200 with it
+	// char db_path[200];	//dangerous, find the MAX_PATH and replace 200 with it
 	// sprintf(db_path, "%s/sbitx/data/sbitx.db", getenv("HOME"));
-	snprintf(db_path, sizeof(db_path), "%sdata/sbitx.db", get_exe_path());
+	// snprintf(db_path, sizeof(db_path), "%sdata/sbitx.db", get_exe_path());
+	const char *db_path = malloc_file_path("data/sbitx.db", "", "");
 	#ifdef LOG
 		log_debug("logbook_open file: %s", db_path);
 	#endif
 
 	rc = sqlite3_open(db_path, &db);
+	free((void *) db_path);
+	#ifdef LOG
+		log_debug("free db_path");
+	#endif
 }
 /*
 create table messages (

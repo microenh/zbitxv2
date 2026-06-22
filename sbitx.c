@@ -67,7 +67,7 @@ void tr_switch(int tx_on);
 #define WISDOM_MODE FFTW_MEASURE
 #define PLANTIME -1		// spend no more than plantime seconds finding the best FFT algorithm. -1 turns the platime cap off.
 //char wisdom_file[] = "/home/pi/sbitx/data/sbitx_wisdom.wis";		// Moved to default data directory - N3SB
-char wisdom_file[200];
+const char *wisdom_file;
 
 fftw_complex *fft_out;		// holds the incoming samples in freq domain (for rx as well as tx)
 fftw_complex *fft_in;			// holds the incoming samples in time domain (for rx as well as tx) 
@@ -173,6 +173,7 @@ void fft_init(){
 	fft_out = (fftw_complex*) fftw_malloc(sizeof(fftw_complex) * MAX_BINS);
 	fft_spectrum = (fftw_complex*) fftw_malloc(sizeof(fftw_complex) * MAX_BINS);
 
+
 	memset(fft_spectrum, 0, sizeof(fftw_complex) * MAX_BINS);
 	memset(fft_in, 0, sizeof(fftw_complex) * MAX_BINS);
 	memset(fft_out, 0, sizeof(fftw_complex) * MAX_BINS);
@@ -181,7 +182,6 @@ void fft_init(){
 	fftw_set_timelimit(PLANTIME);
 	fftwf_set_timelimit(PLANTIME);
 	int e = fftw_import_wisdom_from_filename(wisdom_file);
-
 	#ifdef LOG
 		if (!e) {
 			// printf("Generating Wisdom File...\n");
@@ -1110,8 +1110,9 @@ static void read_hw_ini(){
 	// strcpy(directory, path);
 	// strcat(directory, "/sbitx/data/hw_settings.ini");
 
-	char directory[200];
-	snprintf(directory, sizeof(directory), "%sdata/hw_settings.ini", get_exe_path());
+	// char directory[200];
+	//snprintf(directory, sizeof(directory), "%sdata/hw_settings.ini", get_exe_path());
+	const char *directory = malloc_file_path("data/hw_settings.ini", "", "");
 	#ifdef LOG
 		log_debug("hw settings: %s", directory);
 	#endif
@@ -1124,12 +1125,21 @@ static void read_hw_ini(){
 		#endif
 		// strcpy(directory, path);
 		// strcat(directory, "/sbitx/data/default_hw_settings.ini");
-		snprintf(directory, sizeof(directory), "%sdata/default_hw_settings.ini", get_exe_path());
+		free((void *) directory);
+		#ifdef LOG
+			log_debug("free directory");
+		#endif
+		//snprintf(directory, sizeof(directory), "%sdata/default_hw_settings.ini", get_exe_path());
+		directory = malloc_file_path("data/default_hw_settings.ini", "", "");
 		#ifdef LOG
 			log_debug("default hw settings: %s", directory);
 		#endif
   	ini_parse(directory, hw_settings_handler, NULL);
   }
+	free((void *) directory);
+	#ifdef LOG
+		log_debug("free directory");
+	#endif
 }
 
 /*
@@ -1223,12 +1233,13 @@ void calibrate_band_power(struct power_settings *b){
 
 static void save_hw_settings(){
 	static int last_save_at = 0;
-	char file_path[200];	//dangerous, find the MAX_PATH and replace 200 with it
+	// char file_path[200];	//dangerous, find the MAX_PATH and replace 200 with it
 
 	// char *path = getenv("HOME");
 	// strcpy(file_path, path);
 	// strcat(file_path, "/sbitx/data/hw_settings.ini");
-	snprintf(file_path, sizeof(file_path), "%sdata/hw_settings.ini", get_exe_path());
+	// snprintf(file_path, sizeof(file_path), "%sdata/hw_settings.ini", get_exe_path());
+	const char *file_path = malloc_file_path("data/hw_settings.ini", "", "");
 	#ifdef LOG
 		log_info("save hw settings: %s", file_path);
 	#endif
@@ -1238,9 +1249,16 @@ static void save_hw_settings(){
 			// printf("Unable to save %s : %s\n", file_path, strerror(errno));
 			log_warn("Unable to save %s : %s", file_path, strerror(errno));
 		#endif
+		free((void *) file_path);
+		#ifdef LOG
+			log_debug("free file_path");
+		#endif
 		return;
 	}
-
+	free((void *) file_path);
+	#ifdef LOG
+		log_debug("free file_path");
+	#endif
 	fprintf(f, "bfo_freq=%d\n\n", bfo_freq);
 	//now save the band stack
 	for (int i = 0; i < sizeof(band_power)/sizeof(struct power_settings); i++){
@@ -1492,7 +1510,8 @@ void setup(char *audio_output_device){
 		log_debug("Audio Output Device is: %s", audio_output_device);
 	#endif
 
-	snprintf(wisdom_file, sizeof(wisdom_file), "%sdata/sbitx_wisdom.wis", get_exe_path());
+	// snprintf(wisdom_file, sizeof(wisdom_file), "%sdata/sbitx_wisdom.wis", get_exe_path());
+	wisdom_file = malloc_file_path("data/sbitx_wisdom.wis", "", "");
 	#ifdef LOG
 		log_debug("wisdom file: %s", wisdom_file);
 	#endif
@@ -1520,8 +1539,16 @@ void setup(char *audio_output_device){
 
 	modem_init();
 
+
 	add_rx(7000000, MODE_LSB, -3000, -300);
 	add_tx(7000000, MODE_LSB, -3000, -300);
+	
+	free((void *) wisdom_file);
+	#ifdef LOG
+		log_debug("free wisdom_file");
+	#endif
+
+	log_debug("here");
 	rx_list->tuned_bin = center_bin;
   tx_list->tuned_bin = center_bin;
 	tx_init(7000000, MODE_LSB, -3000, -150);

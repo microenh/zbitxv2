@@ -15,7 +15,8 @@
 #include "get_exe_path.h"
 
 static const char *s_listen_on = "ws://0.0.0.0:8080";
-static char s_web_root[1000];
+//static char s_web_root[1000];
+static const char *s_web_root;
 static char session_cookie[100];
 static struct mg_mgr mgr;  // Event manager
 
@@ -308,9 +309,9 @@ void webserver_start(){
 	//char *path = getenv("HOME");
 	//strcpy(s_web_root, path);
 	//strcat(s_web_root, "/sbitx/web");
-	strcpy(s_web_root, get_exe_path());
-	strcat(s_web_root, "web");
-
+	//strcpy(s_web_root, get_exe_path());
+	//strcat(s_web_root, "web");
+	s_web_root = malloc_file_path("web", "", "");
 	#ifdef LOG
 		log_debug("s_web_root: %s", s_web_root);
 	#endif

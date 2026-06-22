@@ -91,8 +91,9 @@ int make_hann_window(float *window, int max_count){
 // Phase is adjusted so "time zero" (cGenter of impulse response) is at M/2
 // L and M refer to the decimated output
 int window_filter(int const L,int const M,complex float * const response,float const beta){
-	char wisdom_file_f[200];
-	snprintf(wisdom_file_f, sizeof(wisdom_file_f), "%s%s", get_exe_path(), "data/sbitx_wisdom_f.wis");
+	//char wisdom_file_f[200];
+	//snprintf(wisdom_file_f, sizeof(wisdom_file_f), "%s%s", get_exe_path(), "data/sbitx_wisdom_f.wis");
+	const char *wisdom_file_f = malloc_file_path("data/sbitx_wisdom_f.wis", "", "");
 	#ifdef LOG
 		log_debug("wisdom file: %s", wisdom_file_f);
 	#endif
@@ -106,13 +107,20 @@ int window_filter(int const L,int const M,complex float * const response,float c
   fftw_set_timelimit(PLANTIME);
   fftwf_set_timelimit(PLANTIME);
   int e = fftwf_import_wisdom_from_filename(wisdom_file_f);
-  if (e == 0)
+  if (!e)
   {
-    printf("Generating Wisdom File...\n");
+    // printf("Generating Wisdom File...\n");
+		#ifdef LOG
+      log_info("Generating Wisdom File...");
+		#endif
   }
   fftwf_plan fwd_filter_plan = fftwf_plan_dft_1d(N,buffer,buffer,FFTW_FORWARD, WISDOM_MODE); // Was FFTW_ESTIMATE N3SB
   fftwf_plan rev_filter_plan = fftwf_plan_dft_1d(N,buffer,buffer,FFTW_BACKWARD, WISDOM_MODE); // Was FFTW_ESTIMATE N3SB
   fftwf_export_wisdom_to_filename(wisdom_file_f);
+	free((void *) wisdom_file_f);
+	#ifdef LOG
+		log_debug("free wisdom_file_f");
+	#endif
 
   // Convert to time domain
   memcpy(buffer,response,N*sizeof(*buffer));
