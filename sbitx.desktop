@@ -1,0 +1,9 @@
+[Desktop Entry]
+Terminal=false
+Name=sBitx
+Path=/home/pi/Developer/zbitxv2/
+Exec=/home/pi/Developer/zbitxv2/sbitx 6
+# Exec=x-terminal-emulator -e "/home/pi/Developer/zbitxv2/start.sh"
+Type=Application
+Icon=/home/pi/Developer/zbitxv2/sbitx_icon.png
+Categories=HamRadio
