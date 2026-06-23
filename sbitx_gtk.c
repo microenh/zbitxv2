@@ -2820,6 +2820,7 @@ void call_wipe(){
 	field_set("NR", "");
 }
 
+#if 0
 void update_titlebar(){
 	char buff[100];
 
@@ -2829,8 +2830,8 @@ void update_titlebar(){
 		get_field("#mycallsign")->value, get_field("#mygrid")->value,
 		tmp->tm_year + 1900, tmp->tm_mon + 1, tmp->tm_mday, tmp->tm_hour, tmp->tm_min, tmp->tm_sec); 
  	gtk_window_set_title( GTK_WINDOW(window), buff);
-
 }
+#endif
 
 // calcualtes the LOW and HIGH settings from bw
 // and sets them up, called from UI
@@ -4307,7 +4308,7 @@ gboolean ui_tick(gpointer gook){
 		update_field(f);	//move this each time the spectrum watefall index is moved
 		f = get_field("waterfall");
 		update_field(f);
-		update_titlebar();
+		// update_titlebar();
 
 		if (digitalRead(ENC1_SW) == 0){
 			//flip between mode and volume
@@ -4406,7 +4407,8 @@ void ui_init(int argc, char *argv[]){
   window = gtk_window_new(GTK_WINDOW_TOPLEVEL);
   gtk_window_set_default_size(GTK_WINDOW(window), 800, 480);
   //gtk_window_set_default_size(GTK_WINDOW(window), screen_width, screen_height);
-  gtk_window_set_title( GTK_WINDOW(window), "sBITX" );
+  //gtk_window_set_title( GTK_WINDOW(window), "sBITX" );
+  gtk_window_set_title( GTK_WINDOW(window), VER_STR );
 	const char *icon = malloc_file_path("sbitx_icon.png", "", "");
 	// gtk_window_set_icon_from_file(GTK_WINDOW(window), "/home/pi/sbitx/sbitx_icon.png", NULL);
 	gtk_window_set_icon_from_file(GTK_WINDOW(window), icon,  NULL);

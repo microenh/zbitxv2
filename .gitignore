@@ -4,5 +4,6 @@ data/*.db
 *.d
 data/results_row.txt
 data/user_settings.ini
+data/*.wis
 web/grids.txt
 sbitx
