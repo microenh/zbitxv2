@@ -569,7 +569,7 @@ static int sbitx_ft8_decode(float *signal, int num_samples, bool is_ft8)
 				message_add("FT8", freq_hz, 0, message.text);
 
 				#ifdef LOG
-					log_debug("Buff: %d [%s]", strlen(buff), buff);
+					log_debug("Buff: %d [%s]", strlen(buff), buff + 23);
 				#endif
 
 				if (strstr(buff, mycallsign_upper)){
@@ -577,7 +577,8 @@ static int sbitx_ft8_decode(float *signal, int num_samples, bool is_ft8)
 					ft8_process(buff, FT8_CONTINUE_QSO);
 				}
 				else {
-					if (strstr(buff, "CQ")) {	// [mee] 6/19/26 only show CQ
+					// if (strstr(buff, "CQ")) {	// [mee] 6/19/26 only show CQ
+					if (!strncmp(buff + 23, "CQ", 2)) {	// [mee] 6/26/26 only show CQ at beginning
 						write_console(FONT_FT8_RX, buff);
 					}
 				}
