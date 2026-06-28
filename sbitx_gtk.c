@@ -4947,6 +4947,39 @@ void pre_ft8_check(char* message) {
 	}
 }
 
+
+void do_quit(void)
+{
+		#ifdef LOG
+    	log_info("Flushing data to disk...");
+		#endif
+    // Ensure all data in the filesystem cache is written to disk safely
+    sync(); 
+
+		#ifdef LOG
+    	log_info("Initiating Linux system shutdown...");
+    #endif
+
+    // Executes the Linux shutdown command immediately
+    // -P stands for power off, 'now' bypasses the default timer
+    // int result = system("shutdown -P now");
+		int result = system("systemctl poweroff");
+
+    // Check if the system() command failed to execute
+    if (result == -1) {
+				#ifdef LOG
+        	log_warn("Failed to execute shutdown command: %d", result);
+				#endif
+        exit(EXIT_FAILURE); 
+    }
+
+    // Terminate the C program completely
+		#ifdef LOG
+    	log_info("Exiting program.");
+		#endif
+    exit(EXIT_SUCCESS); 
+}
+
 /*
 	These are user/remote entered commands.
 	The command format is "CMD VALUE", the CMD is an all uppercase text
@@ -5147,6 +5180,9 @@ void cmd_exec(char *cmd){
 		//macro_exec(atoi(exec+1), buff);
 		//if (strlen(buff))
 		//	set_field("#text_in", buff);
+	}
+	else if (!strcmp(exec, "QUIT")) {
+		do_quit(); 
 	}
 	else {
 		char field_name[32];
