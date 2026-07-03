@@ -43,13 +43,15 @@ enum {
 #define log_warn(...)  log_log(LOG_WARN,  __FILE__, __LINE__, __VA_ARGS__)
 #define log_error(...) log_log(LOG_ERROR, __FILE__, __LINE__, __VA_ARGS__)
 #define log_fatal(...) log_log(LOG_FATAL, __FILE__, __LINE__, __VA_ARGS__)
-
+#define log_level(level, ...) log_log(level, __FILE__, __LINE__, __VA_ARGS__)
+#define log_timestamp(level, msg, period) _log_timestamp(level, msg, period, __FILE__, __LINE__);
 void log_set_lock(log_LockFn fn, void *udata);
 void log_set_level(int level);
 void log_set_quiet(bool enable);
 int log_add_callback(log_LogFn fn, void *udata, int level);
 int log_add_fp(FILE *fp, int level);
 
+void _log_timestamp(int level, char *msg, int period, const char *file, int line);
 void log_log(int level, const char *file, int line, const char *fmt, ...);
 const char* log_level_string(int level);
 

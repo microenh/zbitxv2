@@ -20,6 +20,8 @@
  * IN THE SOFTWARE.
  */
 
+#include <stdio.h>
+#include <sys/time.h>
 #include "log.h"
 
 #define MAX_CALLBACKS 32
@@ -168,7 +170,22 @@ void log_log(int level, const char *file, int line, const char *fmt, ...) {
 }
 
 char _fmt_buf[80];
+
 char *do_fmt(const char *fmt, va_list args){
 	vsnprintf(_fmt_buf, sizeof(_fmt_buf), fmt, args);
 	return _fmt_buf;
 }
+
+void _log_timestamp(int level, char *msg, int period, const char *file, int line) {
+    struct timeval tv;
+    
+    // Get the current time
+    gettimeofday(&tv, NULL);
+    
+    // Calculate milliseconds since Unix Epoch
+    unsigned long long ms_timestamp = (unsigned long long)(tv.tv_sec % period) * 1000 + 
+                                    (unsigned long long)(tv.tv_usec) / 1000;
+                                      
+    log_log(level, file, line, "%s: %lld", msg, ms_timestamp);
+}
+

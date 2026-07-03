@@ -182,16 +182,30 @@ int sbitx_ft8_encode(char *message, int32_t freq,  float *signal, bool is_ft4)
     // Third, convert the FSK tones into an audio signal
     int sample_rate = 12000;
     int num_samples = (int)(0.5f + num_tones * symbol_period * sample_rate); // samples in the data signal
-    int num_silence = (slot_time * sample_rate - num_samples) / 2;           // Silence  to make 15 seconds
-    int num_total_samples = num_silence + num_samples + num_silence;         // total Number samples 
+    //int num_silence = (slot_time * sample_rate - num_samples) / 2;           // Silence to make 15 seconds
+    //int num_total_samples = num_silence + num_samples + num_silence;         // total Number samples 
+		int num_total_samples = slot_time * sample_rate;
+		int start_silence = 4 * sample_rate / 10;  // 0.1 sec
+		int end_silence = num_total_samples  - num_samples - start_silence;
 
+		for (int i=0; i<start_silence; i++){
+			signal[i] = 0;
+		}
+
+		for (int i=start_silence + num_samples; i<num_total_samples; i++){
+			signal[i] = 0;
+    }
+
+		#if 0
     for (int i = 0; i < num_silence; i++) {
         signal[i] = 0;
         signal[i + num_samples + num_silence] = 0;
     }
+		#endif
+
 
     // Synthesize waveform data (signal) and save it as WAV file
-    synth_gfsk(tones, num_tones, frequency, symbol_bt, symbol_period, sample_rate, signal + num_silence);
+    synth_gfsk(tones, num_tones, frequency, symbol_bt, symbol_period, sample_rate, signal + start_silence /* num_silence */);
     return num_total_samples;
 }
 
@@ -578,7 +592,8 @@ static int sbitx_ft8_decode(float *signal, int num_samples, bool is_ft8)
 				}
 				else {
 					// if (strstr(buff, "CQ")) {	// [mee] 6/19/26 only show CQ
-					if (!strncmp(buff + 23, "CQ", 2)) {	// [mee] 6/26/26 only show CQ at beginning
+					if ((!strncmp(buff + 23, "CQ", 2)) ||	// [mee] 6/26/26 only show CQ at beginning
+							(strstr(buff + 23, "73"))) { // also look for 73
 						write_console(FONT_FT8_RX, buff);
 					}
 				}
@@ -639,7 +654,7 @@ static void ft8_start_tx(int offset_seconds){
 }
 
 // the ft8_tx() only schedules the transmission
-// it is picked up by ft8_poll to do the actuall transmission
+// it is picked up by ft8_poll to do the actual transmission
 void ft8_tx(char *message, int freq){
 	char cmd[200];
 	FILE	*pf;

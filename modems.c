@@ -27,6 +27,7 @@
 #include "sound.h"
 #include "modem_ft8.h"
 #include "modem_cw.h"
+#include "log.h"
 
 typedef float float32_t;
 
@@ -457,7 +458,7 @@ void modem_poll(int mode, int ticks){
 
 	switch(mode){
 	case MODE_FT8:
-		if (ticks % 100){
+		if (!(ticks % 100)){
 			t = time(NULL); // time_sbitx();
 			ft8_poll(t % 60, tx_is_on);
 		}

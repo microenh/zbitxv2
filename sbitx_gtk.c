@@ -4962,8 +4962,8 @@ void do_quit(void)
 
     // Executes the Linux shutdown command immediately
     // -P stands for power off, 'now' bypasses the default timer
-    // int result = system("shutdown -P now");
-		int result = system("systemctl poweroff");
+    int result = system("sudo shutdown -P now");
+		// int result = system("systemctl poweroff");
 
     // Check if the system() command failed to execute
     if (result == -1) {
