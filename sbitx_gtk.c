@@ -1848,10 +1848,12 @@ void draw_tx_meters(struct field *f, cairo_t *gfx){
 	int power = field_int("POWER");
 
 	//power is in 1/10th of watts and vswr is also 1/10th
-	if (power < 30)
-		vswr = 10;
+	// [mee] 7/4/26 - commented out
+	// if (power < 30)
+	//	vswr = 10;
 	
-	sprintf(meter_str, "Power: %d Watts", field_int("POWER")/10);
+	//sprintf(meter_str, "Power: %d Watts", field_int("POWER")/10);
+	sprintf(meter_str, "Power: %d.%d Watts", power/10, power%10);
 	draw_text(gfx, f->x + 20 , f->y + 5 , meter_str, FONT_FIELD_LABEL);
 	sprintf(meter_str, "VSWR: %d.%d", vswr/10,vswr%10);
 	draw_text(gfx, f->x + 200 , f->y + 5 , meter_str, FONT_FIELD_LABEL);
